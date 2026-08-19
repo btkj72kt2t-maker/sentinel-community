@@ -21,6 +21,7 @@ def build_report(name: str) -> tuple[Path, Path]:
             "evidence": [dict(r) for r in conn.execute("SELECT * FROM evidence WHERE engagement_id=?", (eid,))],
             "tool_runs": [dict(r) for r in conn.execute("SELECT * FROM tool_runs WHERE engagement_id=? ORDER BY id", (eid,))],
             "workflows": [dict(r) for r in conn.execute("SELECT * FROM workflows WHERE engagement_id=? ORDER BY id", (eid,))],
+            "jobs": [dict(r) for r in conn.execute("SELECT * FROM jobs WHERE engagement_id=? ORDER BY id", (eid,))],
             "audit": [dict(r) for r in conn.execute("SELECT * FROM audit WHERE engagement_id=? ORDER BY id", (eid,))],
         }
     reports_dir().mkdir(parents=True, exist_ok=True)
@@ -39,6 +40,7 @@ def build_report(name: str) -> tuple[Path, Path]:
 <section><h2>Graph</h2><p>{len(payload['entities'])} entities · {len(payload['relationships'])} relationships</p></section>
 <section><h2>Tool runs</h2><pre>{html.escape(json.dumps(payload['tool_runs'], indent=2))}</pre></section>
 <section><h2>Workflows</h2><pre>{html.escape(json.dumps(payload['workflows'], indent=2))}</pre></section>
+<section><h2>Background jobs</h2><pre>{html.escape(json.dumps(payload['jobs'], indent=2))}</pre></section>
 <section><h2>Evidence</h2><pre>{html.escape(json.dumps(payload['evidence'], indent=2))}</pre></section></body></html>"""
     html_path.write_text(page, encoding="utf-8")
     return json_path, html_path

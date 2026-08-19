@@ -21,6 +21,10 @@ python3 sentinel.py tools list
 python3 sentinel.py tools run acme nmap example.com --approve-active
 python3 sentinel.py workflow create acme web-safe example.com
 python3 sentinel.py workflow run 1 --dry-run
+python3 sentinel.py jobs enqueue acme 1
+python3 sentinel.py jobs run-next acme
+python3 sentinel.py intel score acme
+python3 sentinel.py intel paths acme
 python3 sentinel.py report acme
 ```
 
@@ -36,6 +40,9 @@ another location.
   WHOIS, and dig
 - Resumable passive, web-safe, and network-safe workflows
 - Engagement kill switch and isolated-lab designation
+- Finding deduplication and explainable risk scoring
+- Entity correlation and bounded attack-path analysis
+- Persistent workflow job queue
 - SHA-256 evidence ingestion with append-only audit events
 - SQLite entity/relationship graph
 - JSON and HTML reporting

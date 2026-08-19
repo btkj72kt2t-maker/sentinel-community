@@ -16,6 +16,8 @@ from .tools import REGISTRY, command_for, execute, inventory
 from .policy import execution_decision
 from .workflow import PROFILES, create_workflow, run_workflow
 from .normalize import normalize, persist_normalized
+from .intelligence import attack_paths, score_engagement
+from .jobs import enqueue_workflow, list_jobs, run_next
 
 
 def parser() -> argparse.ArgumentParser:
@@ -67,6 +69,24 @@ def parser() -> argparse.ArgumentParser:
     wr.add_argument("workflow_id", type=int)
     wr.add_argument("--approve-active", action="store_true")
     wr.add_argument("--dry-run", action="store_true")
+    intel = sub.add_parser("intel")
+    ins = intel.add_subparsers(dest="intel_command", required=True)
+    score = ins.add_parser("score")
+    score.add_argument("engagement")
+    paths = ins.add_parser("paths")
+    paths.add_argument("engagement")
+    paths.add_argument("--source")
+    paths.add_argument("--max-depth", type=int, default=5)
+    jobs = sub.add_parser("jobs")
+    js = jobs.add_subparsers(dest="jobs_command", required=True)
+    jq = js.add_parser("enqueue")
+    jq.add_argument("engagement")
+    jq.add_argument("workflow_id", type=int)
+    jq.add_argument("--approve-active", action="store_true")
+    jl = js.add_parser("list")
+    jl.add_argument("engagement")
+    jr = js.add_parser("run-next")
+    jr.add_argument("engagement")
     return p
 
 
@@ -199,5 +219,21 @@ def main(argv=None) -> int:
         try:
             print(json.dumps(run_workflow(args.workflow_id, approve_active=args.approve_active, dry_run=args.dry_run), indent=2))
         except (ValueError, PermissionError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "intel" and args.intel_command == "score":
+        print(json.dumps(score_engagement(args.engagement), indent=2))
+    elif args.command == "intel":
+        print(json.dumps(attack_paths(args.engagement, args.source, max(1, min(args.max_depth, 10))), indent=2))
+    elif args.command == "jobs" and args.jobs_command == "enqueue":
+        try:
+            print(enqueue_workflow(args.engagement, args.workflow_id, args.approve_active))
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "jobs" and args.jobs_command == "list":
+        print(json.dumps(list_jobs(args.engagement), indent=2))
+    elif args.command == "jobs":
+        try:
+            print(json.dumps(run_next(args.engagement), indent=2))
+        except PermissionError as exc:
             raise SystemExit(str(exc)) from exc
     return 0

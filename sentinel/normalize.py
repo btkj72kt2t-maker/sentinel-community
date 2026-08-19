@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ipaddress
 import json
+import hashlib
 import re
 from pathlib import Path
 
@@ -63,17 +64,33 @@ def normalize(tool: str, output_path: str, target: str) -> dict:
 def persist_normalized(conn, engagement_id: int, tool: str, target: str, normalized: dict, timestamp: str) -> dict:
     entity_count = 0
     finding_count = 0
+    target_cur = conn.execute(
+        "INSERT INTO entities(engagement_id,kind,value,attributes,created_at) VALUES(?,?,?,?,?) "
+        "ON CONFLICT(engagement_id,kind,value) DO UPDATE SET attributes=entities.attributes RETURNING id",
+        (engagement_id, "domain", target, "{}", timestamp),
+    )
+    target_id = target_cur.fetchone()[0]
     for entity in normalized["entities"]:
-        conn.execute(
+        entity_cur = conn.execute(
             "INSERT INTO entities(engagement_id,kind,value,attributes,created_at) VALUES(?,?,?,?,?) "
-            "ON CONFLICT(engagement_id,kind,value) DO UPDATE SET attributes=excluded.attributes",
+            "ON CONFLICT(engagement_id,kind,value) DO UPDATE SET attributes=excluded.attributes RETURNING id",
             (engagement_id, entity["kind"], entity["value"], json.dumps(entity.get("attributes", {}), sort_keys=True), timestamp),
         )
+        entity_id = entity_cur.fetchone()[0]
+        if entity_id != target_id:
+            relation = "resolves_to" if entity["kind"] == "ip" else "exposes"
+            conn.execute(
+                "INSERT INTO relationships(engagement_id,source_id,target_id,relation,confidence,evidence,created_at) VALUES(?,?,?,?,?,?,?) "
+                "ON CONFLICT(engagement_id,source_id,target_id,relation) DO UPDATE SET confidence=excluded.confidence,evidence=excluded.evidence",
+                (engagement_id, target_id, entity_id, relation, 0.9, json.dumps({"tool": tool}), timestamp),
+            )
         entity_count += 1
     for finding in normalized["findings"]:
+        fingerprint = hashlib.sha256(f"{tool}\0{target}\0{finding['title']}".encode()).hexdigest()
         conn.execute(
-            "INSERT INTO findings(engagement_id,target,source,severity,title,details,created_at) VALUES(?,?,?,?,?,?,?)",
-            (engagement_id, target, tool, finding["severity"], finding["title"], json.dumps(finding.get("details", {}), sort_keys=True), timestamp),
+            "INSERT INTO findings(engagement_id,target,source,severity,title,details,created_at,fingerprint) VALUES(?,?,?,?,?,?,?,?) "
+            "ON CONFLICT(engagement_id,fingerprint) DO UPDATE SET occurrences=findings.occurrences+1,details=excluded.details,severity=excluded.severity",
+            (engagement_id, target, tool, finding["severity"], finding["title"], json.dumps(finding.get("details", {}), sort_keys=True), timestamp, fingerprint),
         )
         finding_count += 1
     return {"entities": entity_count, "findings": finding_count}

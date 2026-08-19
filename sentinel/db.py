@@ -54,6 +54,12 @@ CREATE TABLE IF NOT EXISTS workflow_steps (
  tool_run_id INTEGER REFERENCES tool_runs(id) ON DELETE SET NULL, message TEXT,
  UNIQUE(workflow_id, position)
 );
+CREATE TABLE IF NOT EXISTS jobs (
+ id INTEGER PRIMARY KEY, engagement_id INTEGER NOT NULL REFERENCES engagements(id) ON DELETE CASCADE,
+ kind TEXT NOT NULL, payload TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'queued',
+ attempts INTEGER NOT NULL DEFAULT 0, message TEXT, created_at TEXT NOT NULL,
+ started_at TEXT, finished_at TEXT
+);
 CREATE TABLE IF NOT EXISTS evidence (
  id INTEGER PRIMARY KEY, engagement_id INTEGER NOT NULL REFERENCES engagements(id) ON DELETE CASCADE,
  original_name TEXT NOT NULL, stored_path TEXT NOT NULL, sha256 TEXT NOT NULL, size INTEGER NOT NULL,
@@ -83,6 +89,16 @@ def initialize() -> Path:
         ):
             if name not in columns:
                 conn.execute(f"ALTER TABLE engagements ADD COLUMN {name} {declaration}")
+        finding_columns = {r[1] for r in conn.execute("PRAGMA table_info(findings)")}
+        for name, declaration in (
+            ("fingerprint", "TEXT"),
+            ("status", "TEXT NOT NULL DEFAULT 'open'"),
+            ("risk_score", "REAL NOT NULL DEFAULT 0"),
+            ("occurrences", "INTEGER NOT NULL DEFAULT 1"),
+        ):
+            if name not in finding_columns:
+                conn.execute(f"ALTER TABLE findings ADD COLUMN {name} {declaration}")
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS findings_fingerprint_idx ON findings(engagement_id,fingerprint) WHERE fingerprint IS NOT NULL")
     return db_path()
 
 
