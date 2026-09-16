@@ -117,6 +117,18 @@ CREATE TABLE IF NOT EXISTS known_signatures (
  id INTEGER PRIMARY KEY, fingerprint TEXT UNIQUE NOT NULL, reference TEXT NOT NULL,
  source TEXT NOT NULL, created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS vulnerability_intelligence (
+ cve TEXT PRIMARY KEY, kev INTEGER NOT NULL DEFAULT 0, kev_added TEXT,
+ ransomware_use TEXT, vendor TEXT, product TEXT, required_action TEXT,
+ epss REAL, epss_percentile REAL, epss_date TEXT,
+ attributes TEXT NOT NULL DEFAULT '{}', updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS finding_vulnerabilities (
+ finding_id INTEGER NOT NULL REFERENCES findings(id) ON DELETE CASCADE,
+ cve TEXT NOT NULL REFERENCES vulnerability_intelligence(cve) ON DELETE CASCADE,
+ confidence REAL NOT NULL DEFAULT 1.0,
+ PRIMARY KEY(finding_id,cve)
+);
 CREATE TABLE IF NOT EXISTS audit (
  id INTEGER PRIMARY KEY, engagement_id INTEGER REFERENCES engagements(id) ON DELETE SET NULL,
  action TEXT NOT NULL, data TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL

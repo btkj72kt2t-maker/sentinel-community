@@ -41,6 +41,7 @@ from .dashboard import build_dashboard
 from .readiness import readiness_report
 from .imports import import_sarif
 from .certification import certify
+from .vulnerability_intel import import_epss, import_kev, link_findings, prioritize, validation_plan
 
 
 def parser() -> argparse.ArgumentParser:
@@ -102,6 +103,16 @@ def parser() -> argparse.ArgumentParser:
     paths.add_argument("engagement")
     paths.add_argument("--source")
     paths.add_argument("--max-depth", type=int, default=5)
+    kev = ins.add_parser("import-kev")
+    kev.add_argument("file", type=Path)
+    epss = ins.add_parser("import-epss")
+    epss.add_argument("file", type=Path)
+    link = ins.add_parser("link")
+    link.add_argument("engagement")
+    priority = ins.add_parser("prioritize")
+    priority.add_argument("engagement")
+    validation = ins.add_parser("validation-plan")
+    validation.add_argument("engagement")
     jobs = sub.add_parser("jobs")
     js = jobs.add_subparsers(dest="jobs_command", required=True)
     jq = js.add_parser("enqueue")
@@ -366,8 +377,24 @@ def main(argv=None) -> int:
             raise SystemExit(str(exc)) from exc
     elif args.command == "intel" and args.intel_command == "score":
         print(json.dumps(score_engagement(args.engagement), indent=2))
-    elif args.command == "intel":
+    elif args.command == "intel" and args.intel_command == "paths":
         print(json.dumps(attack_paths(args.engagement, args.source, max(1, min(args.max_depth, 10))), indent=2))
+    elif args.command == "intel" and args.intel_command == "import-kev":
+        try:
+            print(json.dumps(import_kev(args.file), indent=2))
+        except (ValueError, json.JSONDecodeError, OSError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "intel" and args.intel_command == "import-epss":
+        try:
+            print(json.dumps(import_epss(args.file), indent=2))
+        except (ValueError, OSError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "intel" and args.intel_command == "link":
+        print(json.dumps(link_findings(args.engagement), indent=2))
+    elif args.command == "intel" and args.intel_command == "prioritize":
+        print(json.dumps(prioritize(args.engagement), indent=2))
+    elif args.command == "intel":
+        print(json.dumps(validation_plan(args.engagement), indent=2))
     elif args.command == "jobs" and args.jobs_command == "enqueue":
         try:
             print(enqueue_workflow(args.engagement, args.workflow_id, args.approve_active))

@@ -30,6 +30,8 @@ def build_report(name: str) -> tuple[Path, Path]:
             "coverage_samples": [dict(r) for r in conn.execute("SELECT c.* FROM coverage_samples c JOIN research_campaigns r ON r.id=c.campaign_id WHERE r.engagement_id=? ORDER BY c.id", (eid,))],
             "reproductions": [dict(r) for r in conn.execute("SELECT p.* FROM reproductions p JOIN crashes c ON c.id=p.crash_id JOIN research_campaigns r ON r.id=c.campaign_id WHERE r.engagement_id=? ORDER BY p.id", (eid,))],
             "audit": [dict(r) for r in conn.execute("SELECT * FROM audit WHERE engagement_id=? ORDER BY id", (eid,))],
+            "vulnerability_intelligence": [dict(r) for r in conn.execute("SELECT v.* FROM vulnerability_intelligence v WHERE EXISTS (SELECT 1 FROM finding_vulnerabilities fv JOIN findings f ON f.id=fv.finding_id WHERE fv.cve=v.cve AND f.engagement_id=?) ORDER BY v.cve", (eid,))],
+            "finding_vulnerabilities": [dict(r) for r in conn.execute("SELECT fv.* FROM finding_vulnerabilities fv JOIN findings f ON f.id=fv.finding_id WHERE f.engagement_id=? ORDER BY fv.finding_id,fv.cve", (eid,))],
         }
         payload["coverage_matrix"] = coverage_matrix()
         payload["recommendations"] = recommendations(payload["findings"])
@@ -48,6 +50,7 @@ def build_report(name: str) -> tuple[Path, Path]:
 <section><h2>Findings</h2><table><tr><th>Severity</th><th>Target</th><th>Title</th></tr>{rows}</table></section>
 <section><h2>Remediation guidance</h2><pre>{html.escape(json.dumps(payload['recommendations'], indent=2))}</pre></section>
 <section><h2>Assessment coverage</h2><pre>{html.escape(json.dumps(payload['coverage_matrix']['summary'], indent=2))}</pre></section>
+<section><h2>Vulnerability intelligence</h2><pre>{html.escape(json.dumps(payload['vulnerability_intelligence'], indent=2))}</pre></section>
 <section><h2>Graph</h2><p>{len(payload['entities'])} entities · {len(payload['relationships'])} relationships</p></section>
 <section><h2>Tool runs</h2><pre>{html.escape(json.dumps(payload['tool_runs'], indent=2))}</pre></section>
 <section><h2>Workflows</h2><pre>{html.escape(json.dumps(payload['workflows'], indent=2))}</pre></section>

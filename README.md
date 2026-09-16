@@ -63,6 +63,13 @@ python3 sentinel.py results import-sarif acme scan-results.sarif
 
 # Certify local binaries and reviewed adapters; save the evidence report
 python3 sentinel.py doctor --write
+
+# Import authoritative exploitation intelligence and build the exposure graph
+python3 sentinel.py intel import-kev known_exploited_vulnerabilities.json
+python3 sentinel.py intel import-epss epss_scores.csv
+python3 sentinel.py intel link acme
+python3 sentinel.py intel prioritize acme
+python3 sentinel.py intel validation-plan acme
 python3 sentinel.py daemon run acme --poll-seconds 15 --max-runtime 86400
 python3 sentinel.py daemon status acme
 python3 sentinel.py daemon stop acme
@@ -115,6 +122,8 @@ another location.
 - Machine-readable ten-area readiness report that refuses false production-complete claims
 - Non-root container definition, continuous integration checks, security policy, and threat model
 - Repeatable local certification with SHA-256 identities, permission checks, safe version probes, adapter argument audits, and explicit untested states
+- CISA KEV and FIRST EPSS ingestion with asset/software/vulnerability/threat graph links
+- Explainable exploitation-likelihood prioritization and least-intrusive validation plans
 - Content-addressed corpus storage and duplicate elimination
 - Coverage telemetry history and progress deltas
 - Reproduction evidence and conservative zero-day-candidate scoring
