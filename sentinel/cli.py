@@ -40,6 +40,7 @@ from .provenance import executable_manifest
 from .dashboard import build_dashboard
 from .readiness import readiness_report
 from .imports import import_sarif
+from .certification import certify
 
 
 def parser() -> argparse.ArgumentParser:
@@ -227,6 +228,9 @@ def parser() -> argparse.ArgumentParser:
     sarif = rss.add_parser("import-sarif")
     sarif.add_argument("engagement")
     sarif.add_argument("file", type=Path)
+    doctor = sub.add_parser("doctor")
+    doctor.add_argument("--no-version-probes", action="store_true")
+    doctor.add_argument("--write", action="store_true")
     return p
 
 
@@ -486,4 +490,8 @@ def main(argv=None) -> int:
             print(json.dumps(import_sarif(args.engagement, args.file), indent=2))
         except (ValueError, json.JSONDecodeError, OSError) as exc:
             raise SystemExit(str(exc)) from exc
+    elif args.command == "doctor":
+        result = certify(probe_versions=not args.no_version_probes, write=args.write)
+        print(json.dumps(result, indent=2))
+        return 1 if result["summary"]["failed"] else 0
     return 0

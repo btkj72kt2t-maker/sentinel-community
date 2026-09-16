@@ -60,6 +60,9 @@ python3 sentinel.py readiness
 
 # Import standardized results from SAST, SCA, IaC, cloud, mobile, or firmware tools
 python3 sentinel.py results import-sarif acme scan-results.sarif
+
+# Certify local binaries and reviewed adapters; save the evidence report
+python3 sentinel.py doctor --write
 python3 sentinel.py daemon run acme --poll-seconds 15 --max-runtime 86400
 python3 sentinel.py daemon status acme
 python3 sentinel.py daemon stop acme
@@ -111,6 +114,7 @@ another location.
 - SARIF 2.1 result ingestion for interoperable SAST, SCA, IaC, cloud, mobile, and firmware analysis
 - Machine-readable ten-area readiness report that refuses false production-complete claims
 - Non-root container definition, continuous integration checks, security policy, and threat model
+- Repeatable local certification with SHA-256 identities, permission checks, safe version probes, adapter argument audits, and explicit untested states
 - Content-addressed corpus storage and duplicate elimination
 - Coverage telemetry history and progress deltas
 - Reproduction evidence and conservative zero-day-candidate scoring
