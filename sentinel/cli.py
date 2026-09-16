@@ -21,6 +21,9 @@ from .jobs import enqueue_workflow, list_jobs, run_next
 from .extensions import install_manifest, list_extensions
 from .health import check_health, evidence_inventory
 from .proxy_analysis import analyze_har
+from .benchmark import run_benchmarks
+from .credential_audit import audit_path
+from .lab_validation import validate_marker
 
 
 def parser() -> argparse.ArgumentParser:
@@ -111,6 +114,19 @@ def parser() -> argparse.ArgumentParser:
     xs.add_parser("list")
     xi = xs.add_parser("install")
     xi.add_argument("manifest", type=Path)
+    lab = sub.add_parser("lab")
+    ls = lab.add_subparsers(dest="lab_command", required=True)
+    marker = ls.add_parser("validate-marker")
+    marker.add_argument("engagement")
+    marker.add_argument("url")
+    marker.add_argument("--approve-active", action="store_true")
+    credentials = sub.add_parser("credentials")
+    cs = credentials.add_subparsers(dest="credentials_command", required=True)
+    ca = cs.add_parser("audit")
+    ca.add_argument("path", type=Path)
+    ca.add_argument("--max-files", type=int, default=5000)
+    benchmark = sub.add_parser("benchmark")
+    benchmark.add_argument("--iterations", type=int, default=100)
     return p
 
 
@@ -278,4 +294,16 @@ def main(argv=None) -> int:
             print(json.dumps(install_manifest(args.manifest), indent=2))
         except (ValueError, json.JSONDecodeError) as exc:
             raise SystemExit(str(exc)) from exc
+    elif args.command == "lab":
+        try:
+            print(json.dumps(validate_marker(args.engagement, args.url, args.approve_active), indent=2))
+        except (ValueError, PermissionError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "credentials":
+        try:
+            print(json.dumps(audit_path(args.path, max(1, min(args.max_files, 50000))), indent=2))
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "benchmark":
+        print(json.dumps(run_benchmarks(args.iterations), indent=2))
     return 0

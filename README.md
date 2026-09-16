@@ -29,6 +29,9 @@ python3 sentinel.py health acme
 python3 sentinel.py secure list acme
 python3 sentinel.py proxy analyze-har acme traffic.har
 python3 sentinel.py extensions install ./sentinel-extension.json
+python3 sentinel.py lab validate-marker lab-engagement http://localhost:8000/ --approve-active
+python3 sentinel.py credentials audit ./source-tree
+python3 sentinel.py benchmark --iterations 250
 python3 sentinel.py report acme
 ```
 
@@ -50,6 +53,9 @@ another location.
 - Evidence classification, integrity verification, and safe health repair
 - Passive in-scope HAR traffic analysis with credential redaction
 - Manifest-verified extension registration without automatic code execution
+- Loopback-only, non-destructive marker validation for isolated lab engagements
+- Redacted credential-exposure auditing that never returns secret values
+- Reproducible local benchmarks with environment and latency disclosure
 - SHA-256 evidence ingestion with append-only audit events
 - SQLite entity/relationship graph
 - JSON and HTML reporting

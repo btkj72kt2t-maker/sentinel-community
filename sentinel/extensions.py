@@ -8,6 +8,7 @@ from .db import audit, connect, now
 
 ALLOWED_CATEGORIES = {"recon", "web", "network", "tls", "reporting", "forensics", "osint"}
 REQUIRED_FIELDS = {"name", "version", "category", "description"}
+ALLOWED_PERMISSIONS = {"read_findings", "read_entities", "write_findings", "write_entities", "network_in_scope", "report_output"}
 
 
 def install_manifest(path: Path) -> dict:
@@ -25,6 +26,11 @@ def install_manifest(path: Path) -> dict:
         raise ValueError("unsupported extension category")
     if not str(manifest["name"]).replace("-", "").replace("_", "").isalnum():
         raise ValueError("invalid extension name")
+    permissions = manifest.get("permissions", [])
+    if not isinstance(permissions, list) or any(p not in ALLOWED_PERMISSIONS for p in permissions):
+        raise ValueError("manifest contains unsupported permissions")
+    if manifest.get("entrypoint"):
+        raise ValueError("executable entrypoints are not accepted by the registry")
     digest = hashlib.sha256(raw).hexdigest()
     with connect() as conn:
         conn.execute(
@@ -33,10 +39,9 @@ def install_manifest(path: Path) -> dict:
             (manifest["name"], manifest["version"], manifest["category"], str(path), digest, now()),
         )
         audit(conn, "extension.registered", {"name": manifest["name"], "version": manifest["version"], "sha256": digest})
-    return {"manifest": manifest, "sha256": digest, "enabled": False, "note": "Registration does not execute extension code"}
+    return {"manifest": manifest, "sha256": digest, "enabled": False, "permissions": permissions, "sandbox_ready": False, "note": "Registration does not execute extension code"}
 
 
 def list_extensions() -> list[dict]:
     with connect() as conn:
         return [dict(r) for r in conn.execute("SELECT * FROM extensions ORDER BY name")]
-

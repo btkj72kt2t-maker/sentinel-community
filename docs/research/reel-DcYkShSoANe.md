@@ -32,3 +32,10 @@ Not implemented:
 - Unrestricted third-party Python execution
 - Unverified performance and cryptography claims
 
+## Operational follow-up
+
+The later safe operational milestone adds loopback-only marker validation for isolated
+labs, redacted credential-exposure auditing, permission-declared non-executable
+extension manifests, and reproducible local benchmarks. These capabilities preserve
+the useful testing and measurement workflows without enabling arbitrary targeting,
+secret harvesting, or unrestricted extension execution.
