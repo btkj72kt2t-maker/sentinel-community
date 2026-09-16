@@ -38,6 +38,8 @@ from .api_analysis import analyze_openapi
 from .scheduling import add_schedule, enqueue_due, list_schedules
 from .provenance import executable_manifest
 from .dashboard import build_dashboard
+from .readiness import readiness_report
+from .imports import import_sarif
 
 
 def parser() -> argparse.ArgumentParser:
@@ -219,6 +221,12 @@ def parser() -> argparse.ArgumentParser:
     sub.add_parser("provenance")
     dashboard = sub.add_parser("dashboard")
     dashboard.add_argument("engagement")
+    sub.add_parser("readiness")
+    results = sub.add_parser("results")
+    rss = results.add_subparsers(dest="results_command", required=True)
+    sarif = rss.add_parser("import-sarif")
+    sarif.add_argument("engagement")
+    sarif.add_argument("file", type=Path)
     return p
 
 
@@ -471,4 +479,11 @@ def main(argv=None) -> int:
         print(json.dumps(executable_manifest(), indent=2))
     elif args.command == "dashboard":
         print(build_dashboard(args.engagement))
+    elif args.command == "readiness":
+        print(json.dumps(readiness_report(), indent=2))
+    elif args.command == "results":
+        try:
+            print(json.dumps(import_sarif(args.engagement, args.file), indent=2))
+        except (ValueError, json.JSONDecodeError, OSError) as exc:
+            raise SystemExit(str(exc)) from exc
     return 0

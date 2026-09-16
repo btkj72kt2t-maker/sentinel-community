@@ -54,6 +54,12 @@ python3 sentinel.py schedule list acme
 # Build an operator dashboard and capture executable hashes
 python3 sentinel.py dashboard acme
 python3 sentinel.py provenance
+
+# Inspect the ten-area implementation and outstanding production gates
+python3 sentinel.py readiness
+
+# Import standardized results from SAST, SCA, IaC, cloud, mobile, or firmware tools
+python3 sentinel.py results import-sarif acme scan-results.sarif
 python3 sentinel.py daemon run acme --poll-seconds 15 --max-runtime 86400
 python3 sentinel.py daemon status acme
 python3 sentinel.py daemon stop acme
@@ -93,7 +99,7 @@ another location.
 - Reproducible local benchmarks with environment and latency disclosure
 - Persistent bounded worker with heartbeat, health repair, kill switch, and stop file
 - Local fuzzing campaign registry and sanitizer crash deduplication
-- Curated 130-tool capability index with installation detection (catalogue entries are not executable by default)
+- 852-capability inventory: 130 curated entries plus an official Kali reference index; catalogue entries are not executable by default
 - 16-family vulnerability coverage matrix derived from community methodology and modern application/infrastructure surfaces
 - One-command `hunt` orchestration for passive, web-safe, network-safe, or combined scope-bound assessments
 - Report remediation guidance mapped to finding families and CWE references
@@ -102,6 +108,9 @@ another location.
 - Persistent recurring schedules integrated with the bounded daemon and emergency stop controls
 - Executable provenance manifests for deployment-time tool pinning
 - Local HTML operator dashboard covering findings, validation state, risk, workflows, and jobs
+- SARIF 2.1 result ingestion for interoperable SAST, SCA, IaC, cloud, mobile, and firmware analysis
+- Machine-readable ten-area readiness report that refuses false production-complete claims
+- Non-root container definition, continuous integration checks, security policy, and threat model
 - Content-addressed corpus storage and duplicate elimination
 - Coverage telemetry history and progress deltas
 - Reproduction evidence and conservative zero-day-candidate scoring

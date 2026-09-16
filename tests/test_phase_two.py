@@ -10,6 +10,8 @@ from sentinel.db import connect, now
 from sentinel.provenance import executable_manifest
 from sentinel.scheduling import add_schedule, list_schedules
 from sentinel.validation import correlate_findings
+from sentinel.imports import import_sarif
+from sentinel.readiness import readiness_report
 
 
 class PhaseTwoTests(unittest.TestCase):
@@ -60,6 +62,20 @@ class PhaseTwoTests(unittest.TestCase):
     def test_provenance_only_contains_reviewed_adapters(self):
         names = {item["name"] for item in executable_manifest()["executables"]}
         self.assertNotIn("python-extension", names)
+
+    def test_sarif_import_normalizes_offline_findings(self):
+        sarif = Path(self.temp.name) / "scan.sarif"
+        sarif.write_text(json.dumps({"version": "2.1.0", "runs": [{"tool": {"driver": {"name": "ExampleSAST"}}, "results": [{"ruleId": "CWE-79", "level": "error", "message": {"text": "Unsafe output"}, "locations": [{"physicalLocation": {"artifactLocation": {"uri": "src/app.py"}}}]}]}]}))
+        result = import_sarif("demo", sarif)
+        self.assertEqual(result["findings"], 1)
+        with connect() as conn:
+            row = conn.execute("SELECT source,severity,target FROM findings WHERE engagement_id=?", (self.eid,)).fetchone()
+        self.assertEqual((row["source"], row["severity"], row["target"]), ("ExampleSAST", "high", "src/app.py"))
+
+    def test_readiness_does_not_make_false_completion_claims(self):
+        report = readiness_report()
+        self.assertEqual(len(report["areas"]), 10)
+        self.assertTrue(all(area["production_complete"] is False for area in report["areas"]))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,21 @@
+name: sentinel-ci
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile
+        run: python -m py_compile sentinel.py sentinel/*.py
+      - name: Test with resource warnings as errors
+        run: python -W error::ResourceWarning -m unittest discover -v
+      - name: Verify catalogue floor
+        run: python -c "from sentinel.catalog import capability_catalog; assert capability_catalog()['summary']['catalogued'] >= 400"
