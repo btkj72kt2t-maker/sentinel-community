@@ -1,139 +1,520 @@
 # Sentinel Community
 
-Sentinel Community is a local-first, Kali-compatible workspace for authorized
-bug-bounty and defensive security investigations. It provides engagement scope
-enforcement, passive reconnaissance, evidence hashing, relationship graphs,
-audit logs, and portable reports.
+Sentinel Community is a local-first, Kali-compatible command-line workspace for
+authorized bug-bounty, vulnerability-research, and defensive-security work. It
+combines strict scope enforcement, reviewed tool adapters, normalized findings,
+an asset and vulnerability knowledge graph, KEV/EPSS intelligence, evidence
+integrity, research workflows, risk prioritization, and portable reports.
 
-## Safety model
+Sentinel is an orchestration and evidence platform. Its catalogue contains 852
+security capabilities, but catalogue membership does not make a tool executable.
+Only registered, reviewed adapters can run; unavailable tools are reported as
+untested rather than presented as working.
 
-Every target belongs to an engagement. Commands reject targets outside the
-engagement's exact hosts or explicitly allowed subdomains. Active checks must
-also be enabled on the engagement and requested with `--active`.
+## Safety and authorization
 
-## Quick start
+Use Sentinel only on systems you own or have written permission to assess.
+
+- Every network target must belong to a named engagement scope.
+- Active testing requires `--enable-active` on the engagement and
+  `--approve-active` on the operation.
+- The engagement kill switch overrides approvals and stops background work.
+- Potentially disruptive proof-of-impact belongs in an isolated lab engagement.
+- The marker validator accepts loopback targets only.
+- Extensions are declarative and disabled by default.
+- Sentinel does not provide credential harvesting, persistence, evasion,
+  destructive actions, autonomous lateral movement, or indiscriminate scanning.
+- KEV and EPSS improve prioritization but do not prove that an asset is vulnerable.
+
+## Requirements and installation
+
+Requirements are Python 3.10 or newer, SQLite support included with Python, and
+Linux, Kali Linux, or macOS. External tools are needed only when their reviewed
+adapters are used; Sentinel never installs them silently.
 
 ```bash
+git clone https://github.com/btkj72kt2t-maker/sentinel-community.git
+cd sentinel-community
 python3 sentinel.py init
-python3 sentinel.py engagement create acme --domain example.com --allow-subdomains
-python3 sentinel.py recon acme example.com
-python3 sentinel.py tools list
-python3 sentinel.py tools run acme nmap example.com --approve-active
-python3 sentinel.py workflow create acme web-safe example.com
-python3 sentinel.py workflow run 1 --dry-run
-python3 sentinel.py jobs enqueue acme 1
-python3 sentinel.py jobs run-next acme
-python3 sentinel.py intel score acme
-python3 sentinel.py intel paths acme
-python3 sentinel.py health acme
-python3 sentinel.py secure list acme
-python3 sentinel.py proxy analyze-har acme traffic.har
-python3 sentinel.py extensions install ./sentinel-extension.json
-python3 sentinel.py lab validate-marker lab-engagement http://localhost:8000/ --approve-active
-python3 sentinel.py credentials audit ./source-tree
-python3 sentinel.py benchmark --iterations 250
-python3 sentinel.py catalog
-python3 sentinel.py coverage
-
-# One-command, scope-bound assessment plan (no network execution)
-python3 sentinel.py hunt acme example.com --mode full-safe --dry-run
-
-# Execute reviewed active adapters and generate JSON/HTML reports
-python3 sentinel.py hunt acme example.com --mode full-safe --approve-active
-
-# Correlate independent observations and score confidence
-python3 sentinel.py validate acme
-
-# Analyze an in-scope OpenAPI JSON contract without sending traffic
-python3 sentinel.py api analyze-openapi acme openapi.json
-
-# Add a bounded recurring assessment (minimum interval: five minutes)
-python3 sentinel.py schedule add acme example.com web-safe --interval 86400 --approve-active
-python3 sentinel.py schedule list acme
-
-# Build an operator dashboard and capture executable hashes
-python3 sentinel.py dashboard acme
-python3 sentinel.py provenance
-
-# Inspect the ten-area implementation and outstanding production gates
-python3 sentinel.py readiness
-
-# Import standardized results from SAST, SCA, IaC, cloud, mobile, or firmware tools
-python3 sentinel.py results import-sarif acme scan-results.sarif
-
-# Certify local binaries and reviewed adapters; save the evidence report
 python3 sentinel.py doctor --write
-
-# Import authoritative exploitation intelligence and build the exposure graph
-python3 sentinel.py intel import-kev known_exploited_vulnerabilities.json
-python3 sentinel.py intel import-epss epss_scores.csv
-python3 sentinel.py intel link acme
-python3 sentinel.py intel prioritize acme
-python3 sentinel.py intel validation-plan acme
-python3 sentinel.py daemon run acme --poll-seconds 15 --max-runtime 86400
-python3 sentinel.py daemon status acme
-python3 sentinel.py daemon stop acme
-python3 sentinel.py research create lab parser-fuzz afl++ ./parser ./corpus
-python3 sentinel.py research plan 1
-python3 sentinel.py research triage 1 ./asan-crash.log
-python3 sentinel.py research ingest-corpus 1 ./corpus
-python3 sentinel.py research corpus-stats 1
-python3 sentinel.py research import-coverage 1 ./coverage.json
-python3 sentinel.py research coverage-trend 1
-python3 sentinel.py research sandbox-plan 1
-python3 sentinel.py research record-reproduction 1 ./crash-input --sanitizer ASan reproduced
-python3 sentinel.py research score-candidate 1
-python3 sentinel.py report acme
 ```
 
-State is stored under `.sentinel/` by default. Use `SENTINEL_DATA_DIR` to choose
-another location.
+Runtime state is stored in `.sentinel/` by default. Choose another protected
+location with:
 
-## Current modules
+```bash
+export SENTINEL_DATA_DIR=/secure/path/sentinel-data
+python3 sentinel.py init
+```
 
-- Engagement and target scope management
-- Passive DNS and TLS reconnaissance
-- Rate-limited, approval-gated Nmap adapter
-- Controlled adapters for Nmap, Nuclei, Subfinder, httpx, WhatWeb, testssl,
-  WHOIS, and dig
-- Resumable passive, web-safe, and network-safe workflows
-- Engagement kill switch and isolated-lab designation
-- Finding deduplication and explainable risk scoring
-- Entity correlation and bounded attack-path analysis
-- Persistent workflow job queue
-- Evidence classification, integrity verification, and safe health repair
-- Passive in-scope HAR traffic analysis with credential redaction
-- Manifest-verified extension registration without automatic code execution
-- Loopback-only, non-destructive marker validation for isolated lab engagements
-- Redacted credential-exposure auditing that never returns secret values
-- Reproducible local benchmarks with environment and latency disclosure
-- Persistent bounded worker with heartbeat, health repair, kill switch, and stop file
-- Local fuzzing campaign registry and sanitizer crash deduplication
-- 852-capability inventory: 130 curated entries plus an official Kali reference index; catalogue entries are not executable by default
-- 16-family vulnerability coverage matrix derived from community methodology and modern application/infrastructure surfaces
-- One-command `hunt` orchestration for passive, web-safe, network-safe, or combined scope-bound assessments
-- Report remediation guidance mapped to finding families and CWE references
-- Cross-tool correlation with explicit unverified, reproduced, and confirmed states
-- Offline, scope-checked OpenAPI contract analysis for authentication, object authorization, and schema risks
-- Persistent recurring schedules integrated with the bounded daemon and emergency stop controls
-- Executable provenance manifests for deployment-time tool pinning
-- Local HTML operator dashboard covering findings, validation state, risk, workflows, and jobs
-- SARIF 2.1 result ingestion for interoperable SAST, SCA, IaC, cloud, mobile, and firmware analysis
-- Machine-readable ten-area readiness report that refuses false production-complete claims
-- Non-root container definition, continuous integration checks, security policy, and threat model
-- Repeatable local certification with SHA-256 identities, permission checks, safe version probes, adapter argument audits, and explicit untested states
-- CISA KEV and FIRST EPSS ingestion with asset/software/vulnerability/threat graph links
-- Explainable exploitation-likelihood prioritization and least-intrusive validation plans
-- Content-addressed corpus storage and duplicate elimination
-- Coverage telemetry history and progress deltas
-- Reproduction evidence and conservative zero-day-candidate scoring
-- Sandbox readiness plans that refuse execution without a supported isolation backend
+Do not commit that directory. It can contain confidential evidence, reports,
+target metadata, and audit records.
 
-The included systemd unit is a hardened template. Replace `ENGAGEMENT_NAME`, review
-paths and policy, then install it manually on the authorized Kali host.
-- SHA-256 evidence ingestion with append-only audit events
-- SQLite entity/relationship graph
-- JSON and HTML reporting
+## Tool certification
 
-The codebase intentionally does not include credential attacks, automated
-exploitation, stealth/evasion, or indiscriminate internet scanning.
+Run certification after installation and after upgrading an external tool:
+
+```bash
+python3 sentinel.py doctor --write
+```
+
+The report at `.sentinel/certification.json` records catalogue integrity,
+executable permissions, SHA-256 identities, safe local version probes, and every
+adapter's argument-construction checks.
+
+- `passed`: the local check succeeded.
+- `failed`: the local check found a real problem.
+- `untested`: the tool is absent or cannot be inspected.
+- `adapter_code_certified`: every registered profile constructs fixed arguments.
+- `installed_integrity_passed`: no installed binary failed inspection.
+- `environment_ready`: every reviewed adapter is installed and passed its probe.
+
+Certification verifies local integration, not perfect third-party algorithms or
+guaranteed vulnerability coverage.
+
+## 1. Engagements and scope
+
+Create a passive engagement for one exact domain:
+
+```bash
+python3 sentinel.py engagement create acme --domain example.com
+```
+
+Allow subdomains explicitly:
+
+```bash
+python3 sentinel.py engagement create acme-web \
+  --domain example.com \
+  --allow-subdomains
+```
+
+Create an engagement for approval-gated active checks:
+
+```bash
+python3 sentinel.py engagement create acme-active \
+  --domain example.com \
+  --allow-subdomains \
+  --enable-active \
+  --max-rate 25
+```
+
+Create an isolated research engagement:
+
+```bash
+python3 sentinel.py engagement create parser-lab \
+  --domain localhost \
+  --enable-active \
+  --lab-mode \
+  --max-rate 10
+```
+
+Repeated `--domain` and `--ip` arguments can define exact authorized domains,
+IP addresses, or CIDRs. Review engagements with:
+
+```bash
+python3 sentinel.py engagement list
+```
+
+## 2. Emergency controls
+
+Enable the kill switch immediately:
+
+```bash
+python3 sentinel.py engagement kill acme-active
+```
+
+Clear it only after reviewing the stop reason:
+
+```bash
+python3 sentinel.py engagement resume acme-active
+```
+
+## 3. Tools, catalogue, and coverage
+
+```bash
+python3 sentinel.py tools list
+python3 sentinel.py catalog
+python3 sentinel.py coverage
+python3 sentinel.py readiness
+```
+
+`tools list` shows executable adapters. `catalog` shows the broader capability
+inventory. `coverage` maps vulnerability families to available tools.
+`readiness` shows the ten architectural foundations and outstanding production
+gates.
+
+Reviewed adapters currently cover `dig`, `whois`, `subfinder`, `httpx`,
+`whatweb`, `testssl.sh`, `nmap`, and `nuclei`. A catalogue entry without an
+adapter cannot execute through Sentinel.
+
+## 4. Reconnaissance and individual adapters
+
+Passive reconnaissance:
+
+```bash
+python3 sentinel.py recon acme example.com
+python3 sentinel.py tools run acme whois example.com
+```
+
+An active adapter requires both approval gates:
+
+```bash
+python3 sentinel.py tools run acme-active nmap example.com \
+  --profile safe \
+  --approve-active \
+  --timeout 600
+```
+
+Targets are scope-checked before execution. Adapters use argument arrays rather
+than shell strings. Output is stored under `.sentinel/runs/` and supported output
+is normalized into entities and findings.
+
+## 5. One-command hunts
+
+Inspect a plan without network execution:
+
+```bash
+python3 sentinel.py hunt acme-active example.com \
+  --mode full-safe \
+  --dry-run
+```
+
+Modes are `passive`, `web`, `network`, and `full-safe`. Execute after reviewing
+authorization and the plan:
+
+```bash
+python3 sentinel.py hunt acme-active example.com \
+  --mode full-safe \
+  --approve-active
+```
+
+A completed hunt correlates findings, scores risk, links vulnerability
+intelligence, creates a least-intrusive validation plan, and generates JSON,
+HTML, and dashboard output.
+
+## 6. Workflows and jobs
+
+```bash
+python3 sentinel.py workflow profiles
+python3 sentinel.py workflow create acme-active web-safe example.com
+python3 sentinel.py workflow run WORKFLOW_ID --dry-run
+python3 sentinel.py workflow run WORKFLOW_ID --approve-active
+```
+
+Queue a workflow for background processing:
+
+```bash
+python3 sentinel.py jobs enqueue acme-active WORKFLOW_ID --approve-active
+python3 sentinel.py jobs list acme-active
+python3 sentinel.py jobs run-next acme-active
+```
+
+Commands print record identifiers when they create them. Use those returned IDs
+instead of assuming they start at `1`.
+
+## 7. Scheduling and the worker
+
+Create a daily schedule:
+
+```bash
+python3 sentinel.py schedule add acme-active example.com web-safe \
+  --interval 86400 \
+  --approve-active
+python3 sentinel.py schedule list acme-active
+python3 sentinel.py schedule enqueue-due acme-active
+```
+
+The minimum interval is five minutes. Run the bounded worker:
+
+```bash
+python3 sentinel.py daemon run acme-active \
+  --poll-seconds 15 \
+  --max-jobs 100 \
+  --max-runtime 86400
+```
+
+From another terminal:
+
+```bash
+python3 sentinel.py daemon status acme-active
+python3 sentinel.py daemon stop acme-active
+```
+
+The worker observes the kill switch, stop file, job limit, runtime limit, and
+health checks. `deploy/sentinel-worker.service` is a hardened systemd template;
+replace its placeholders and review its paths before installing it.
+
+## 8. KEV, EPSS, and the knowledge graph
+
+Import archived, reviewed snapshots of CISA KEV JSON and FIRST EPSS CSV:
+
+```bash
+python3 sentinel.py intel import-kev known_exploited_vulnerabilities.json
+python3 sentinel.py intel import-epss epss_scores.csv
+```
+
+Link CVEs from findings to assets, products, and threat signals:
+
+```bash
+python3 sentinel.py intel link acme-active
+python3 sentinel.py intel paths acme-active --source example.com --max-depth 5
+```
+
+Prioritize and plan validation:
+
+```bash
+python3 sentinel.py intel prioritize acme-active
+python3 sentinel.py intel validation-plan acme-active
+```
+
+Scores expose severity, EPSS probability, KEV status, and evidence confidence.
+Lower-priority findings use passive evidence; medium-priority findings may use
+non-destructive scoped checks; KEV and high-priority findings are routed to an
+isolated laboratory. Sentinel does not automatically exploit live targets.
+
+## 9. Correlation, risk, and paths
+
+```bash
+python3 sentinel.py validate acme-active
+python3 sentinel.py intel score acme-active
+python3 sentinel.py intel paths acme-active
+```
+
+Validation states are `unverified`, `reproduced`, and `confirmed`. A single
+scanner result is not automatically considered independently confirmed.
+
+## 10. API, traffic, and standardized results
+
+Analyze an OpenAPI 3 or Swagger JSON file without sending requests:
+
+```bash
+python3 sentinel.py api analyze-openapi acme-active openapi.json
+```
+
+Any server declared by the specification must match engagement scope. Analyze a
+browser-proxy HAR file passively:
+
+```bash
+python3 sentinel.py proxy analyze-har acme-active traffic.har
+```
+
+Import SARIF 2.1 output from SAST, SCA, IaC, cloud, container, mobile, firmware,
+or other compatible tools:
+
+```bash
+python3 sentinel.py results import-sarif acme-active scan-results.sarif
+```
+
+## 11. Source and credential-exposure review
+
+```bash
+python3 sentinel.py credentials audit ./source-tree --max-files 5000
+```
+
+This reports redacted indicators and never returns detected secret values. Use it
+only for files and repositories you are authorized to inspect.
+
+## 12. Evidence and health
+
+Add classified evidence:
+
+```bash
+python3 sentinel.py evidence acme-active ./capture.json \
+  --classification CONFIDENTIAL \
+  --category tool-output
+```
+
+List evidence and verify workspace health:
+
+```bash
+python3 sentinel.py secure list acme-active
+python3 sentinel.py secure verify acme-active
+python3 sentinel.py health acme-active
+python3 sentinel.py health acme-active --repair
+```
+
+Evidence is content-addressed with SHA-256. Store the data directory on encrypted
+storage and apply retention appropriate to its classification.
+
+## 13. Isolated vulnerability research
+
+Research campaigns require a `--lab-mode` engagement. Sentinel stores plans and
+evidence; review the sandbox plan before launching an external fuzzing engine.
+
+```bash
+python3 sentinel.py research create parser-lab parser-fuzz afl++ \
+  ./parser ./corpus --max-seconds 3600
+python3 sentinel.py research sandbox-plan CAMPAIGN_ID
+python3 sentinel.py research plan CAMPAIGN_ID
+python3 sentinel.py research ingest-corpus CAMPAIGN_ID ./corpus
+python3 sentinel.py research corpus-stats CAMPAIGN_ID
+python3 sentinel.py research import-coverage CAMPAIGN_ID ./coverage.json
+python3 sentinel.py research coverage-trend CAMPAIGN_ID
+python3 sentinel.py research triage CAMPAIGN_ID ./asan-crash.log
+```
+
+Record controlled reproduction and score the candidate:
+
+```bash
+python3 sentinel.py research record-reproduction CRASH_ID ./crash-input \
+  reproduced --sanitizer ASan
+python3 sentinel.py research score-candidate CRASH_ID
+```
+
+Prevent a known issue from being labeled novel:
+
+```bash
+python3 sentinel.py research add-known-signature \
+  SHA256_FINGERPRINT CVE-2026-12345 --source vendor-advisory
+```
+
+“Zero-day candidate” is not proof of public novelty. Vendor coordination and
+external-database review are still required.
+
+## 14. Loopback laboratory validation
+
+```bash
+python3 sentinel.py lab validate-marker parser-lab \
+  http://localhost:8000/ \
+  --approve-active
+```
+
+The validator sends a unique harmless marker and records whether it was reflected.
+Non-loopback targets are rejected.
+
+## 15. Reports and dashboard
+
+```bash
+python3 sentinel.py report acme-active
+python3 sentinel.py dashboard acme-active
+```
+
+Output under `.sentinel/reports/` includes scope, findings, remediation guidance,
+coverage, graph information, runs, workflows, jobs, schedules, vulnerability
+intelligence, research evidence, and evidence metadata. The dashboard is a local
+HTML snapshot, not a network service.
+
+## 16. Extensions
+
+```bash
+python3 sentinel.py extensions install ./sentinel-extension.json
+python3 sentinel.py extensions list
+```
+
+Registration does not execute extension code. Executable entrypoints and
+unexpected files are rejected.
+
+## 17. Provenance and benchmarking
+
+```bash
+python3 sentinel.py provenance
+python3 sentinel.py benchmark --iterations 250
+```
+
+Provenance records installed adapter hashes. Benchmarks disclose their local
+environment and are not universal performance claims.
+
+## Complete authorized workflow
+
+```bash
+# Initialize and certify
+python3 sentinel.py init
+python3 sentinel.py doctor --write
+
+# Create precise scope with active testing enabled
+python3 sentinel.py engagement create authorized-test \
+  --domain example.com \
+  --allow-subdomains \
+  --enable-active \
+  --max-rate 20
+
+# Review before execution
+python3 sentinel.py hunt authorized-test example.com \
+  --mode full-safe \
+  --dry-run
+
+# Execute the approved plan
+python3 sentinel.py hunt authorized-test example.com \
+  --mode full-safe \
+  --approve-active
+
+# Add reviewed vulnerability-intelligence snapshots
+python3 sentinel.py intel import-kev known_exploited_vulnerabilities.json
+python3 sentinel.py intel import-epss epss_scores.csv
+
+# Link, prioritize, validate, and report
+python3 sentinel.py intel link authorized-test
+python3 sentinel.py intel prioritize authorized-test
+python3 sentinel.py intel validation-plan authorized-test
+python3 sentinel.py validate authorized-test
+python3 sentinel.py report authorized-test
+python3 sentinel.py dashboard authorized-test
+```
+
+## Data layout
+
+```text
+.sentinel/
+├── sentinel.db             SQLite state and audit records
+├── evidence/               Content-addressed evidence
+├── runs/                   Tool stdout and stderr
+├── reports/                JSON, HTML, and dashboard output
+├── certification.json      Optional doctor report
+├── heartbeat-*.json        Worker status
+└── stop-*                  Worker stop requests
+```
+
+## Troubleshooting
+
+### Target is outside engagement scope
+
+Review `engagement list` and create an engagement containing the exact authorized
+domain, IP, or CIDR. Never broaden scope merely to bypass the error.
+
+### Active execution is disabled
+
+The engagement was not created with `--enable-active`. Create an appropriately
+authorized engagement; active mode is never inferred.
+
+### Active execution requires explicit approval
+
+Review the dry run, then add `--approve-active` only when the operation is
+authorized.
+
+### Tool is not installed
+
+Run `doctor --write` and install the expected upstream package through a trusted,
+pinned process. Catalogue presence is not installation.
+
+### Workflow is blocked
+
+Check scope, the kill switch, active enablement, per-run approval, installed
+adapters, and workflow status. Policy decisions are included in the audit log.
+
+### Environment is not ready
+
+One or more reviewed adapters are missing or unverified. `doctor` identifies
+exactly which adapters passed, failed, or remain untested.
+
+## Development and verification
+
+```bash
+python3 -m py_compile sentinel.py sentinel/*.py
+python3 -W error::ResourceWarning -m unittest discover -v
+```
+
+Continuous integration runs these checks and verifies the stated catalogue floor.
+
+## Deployment and security documentation
+
+- `deploy/Dockerfile` runs Sentinel as an unprivileged user with state at `/data`.
+- `deploy/sentinel-worker.service` is the bounded-worker systemd template.
+- Pin the container base and executable hashes in production.
+- Back up and protect the data directory before upgrades.
+- Read [SECURITY.md](SECURITY.md), [the threat model](docs/threat-model.md),
+  [certification](docs/certification.md), and
+  [vulnerability intelligence](docs/vulnerability-intelligence.md).
+
+Do not place credentials, personal data, or third-party evidence in public
+issues. Report Sentinel security defects through GitHub private vulnerability
+reporting as described in [SECURITY.md](SECURITY.md).
