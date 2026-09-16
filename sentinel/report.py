@@ -23,6 +23,7 @@ def build_report(name: str) -> tuple[Path, Path]:
             "tool_runs": [dict(r) for r in conn.execute("SELECT * FROM tool_runs WHERE engagement_id=? ORDER BY id", (eid,))],
             "workflows": [dict(r) for r in conn.execute("SELECT * FROM workflows WHERE engagement_id=? ORDER BY id", (eid,))],
             "jobs": [dict(r) for r in conn.execute("SELECT * FROM jobs WHERE engagement_id=? ORDER BY id", (eid,))],
+            "schedules": [dict(r) for r in conn.execute("SELECT * FROM schedules WHERE engagement_id=? ORDER BY id", (eid,))],
             "proxy_observations": [dict(r) for r in conn.execute("SELECT * FROM proxy_observations WHERE engagement_id=? ORDER BY id", (eid,))],
             "research_campaigns": [dict(r) for r in conn.execute("SELECT * FROM research_campaigns WHERE engagement_id=? ORDER BY id", (eid,))],
             "research_crashes": [dict(r) for r in conn.execute("SELECT c.* FROM crashes c JOIN research_campaigns r ON r.id=c.campaign_id WHERE r.engagement_id=? ORDER BY c.id", (eid,))],
@@ -51,6 +52,7 @@ def build_report(name: str) -> tuple[Path, Path]:
 <section><h2>Tool runs</h2><pre>{html.escape(json.dumps(payload['tool_runs'], indent=2))}</pre></section>
 <section><h2>Workflows</h2><pre>{html.escape(json.dumps(payload['workflows'], indent=2))}</pre></section>
 <section><h2>Background jobs</h2><pre>{html.escape(json.dumps(payload['jobs'], indent=2))}</pre></section>
+<section><h2>Schedules</h2><pre>{html.escape(json.dumps(payload['schedules'], indent=2))}</pre></section>
 <section><h2>Proxy observations</h2><pre>{html.escape(json.dumps(payload['proxy_observations'], indent=2))}</pre></section>
 <section><h2>Research campaigns</h2><pre>{html.escape(json.dumps(payload['research_campaigns'], indent=2))}</pre></section>
 <section><h2>Research evidence</h2><p>{len(payload['research_crashes'])} crashes · {len(payload['reproductions'])} reproductions · {len(payload['coverage_samples'])} coverage samples</p><pre>{html.escape(json.dumps(payload['research_crashes'], indent=2))}</pre></section>

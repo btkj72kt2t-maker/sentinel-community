@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -59,6 +59,13 @@ CREATE TABLE IF NOT EXISTS jobs (
  kind TEXT NOT NULL, payload TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'queued',
  attempts INTEGER NOT NULL DEFAULT 0, message TEXT, created_at TEXT NOT NULL,
  started_at TEXT, finished_at TEXT
+);
+CREATE TABLE IF NOT EXISTS schedules (
+ id INTEGER PRIMARY KEY, engagement_id INTEGER NOT NULL REFERENCES engagements(id) ON DELETE CASCADE,
+ target TEXT NOT NULL, profile TEXT NOT NULL, interval_seconds INTEGER NOT NULL,
+ approve_active INTEGER NOT NULL DEFAULT 0, enabled INTEGER NOT NULL DEFAULT 1,
+ last_run_at TEXT, next_run_at TEXT NOT NULL, created_at TEXT NOT NULL,
+ UNIQUE(engagement_id,target,profile)
 );
 CREATE TABLE IF NOT EXISTS evidence (
  id INTEGER PRIMARY KEY, engagement_id INTEGER NOT NULL REFERENCES engagements(id) ON DELETE CASCADE,
@@ -124,7 +131,7 @@ def now() -> str:
 def initialize() -> Path:
     for path in (data_dir(), evidence_dir(), reports_dir()):
         path.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(db_path()) as conn:
+    with closing(sqlite3.connect(db_path())) as conn:
         conn.executescript(SCHEMA)
         columns = {r[1] for r in conn.execute("PRAGMA table_info(engagements)")}
         for name, declaration in (
@@ -152,6 +159,7 @@ def initialize() -> Path:
         ):
             if name not in evidence_columns:
                 conn.execute(f"ALTER TABLE evidence ADD COLUMN {name} {declaration}")
+        conn.commit()
     return db_path()
 
 

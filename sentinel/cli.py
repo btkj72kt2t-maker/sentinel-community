@@ -33,6 +33,11 @@ from .novelty import add_known_signature, record_reproduction, score_candidate
 from .sandbox import sandbox_plan
 from .taxonomy import coverage_matrix
 from .hunt import HUNT_MODES, run_hunt
+from .validation import correlate_findings
+from .api_analysis import analyze_openapi
+from .scheduling import add_schedule, enqueue_due, list_schedules
+from .provenance import executable_manifest
+from .dashboard import build_dashboard
 
 
 def parser() -> argparse.ArgumentParser:
@@ -192,6 +197,28 @@ def parser() -> argparse.ArgumentParser:
     hunt.add_argument("--mode", choices=sorted(HUNT_MODES), default="full-safe")
     hunt.add_argument("--approve-active", action="store_true")
     hunt.add_argument("--dry-run", action="store_true")
+    validate = sub.add_parser("validate")
+    validate.add_argument("engagement")
+    api = sub.add_parser("api")
+    aps = api.add_subparsers(dest="api_command", required=True)
+    openapi = aps.add_parser("analyze-openapi")
+    openapi.add_argument("engagement")
+    openapi.add_argument("spec", type=Path)
+    schedule = sub.add_parser("schedule")
+    scs = schedule.add_subparsers(dest="schedule_command", required=True)
+    sca = scs.add_parser("add")
+    sca.add_argument("engagement")
+    sca.add_argument("target")
+    sca.add_argument("profile", choices=sorted(PROFILES))
+    sca.add_argument("--interval", type=int, default=86400)
+    sca.add_argument("--approve-active", action="store_true")
+    scl = scs.add_parser("list")
+    scl.add_argument("engagement")
+    scr = scs.add_parser("enqueue-due")
+    scr.add_argument("engagement")
+    sub.add_parser("provenance")
+    dashboard = sub.add_parser("dashboard")
+    dashboard.add_argument("engagement")
     return p
 
 
@@ -421,4 +448,27 @@ def main(argv=None) -> int:
             print(json.dumps(run_hunt(args.engagement, args.target, args.mode, approve_active=args.approve_active, dry_run=args.dry_run), indent=2))
         except (ValueError, PermissionError) as exc:
             raise SystemExit(str(exc)) from exc
+    elif args.command == "validate":
+        print(json.dumps(correlate_findings(args.engagement), indent=2))
+    elif args.command == "api":
+        try:
+            print(json.dumps(analyze_openapi(args.engagement, args.spec), indent=2))
+        except (ValueError, PermissionError, json.JSONDecodeError, OSError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "schedule" and args.schedule_command == "add":
+        try:
+            print(add_schedule(args.engagement, args.target, args.profile, args.interval, args.approve_active))
+        except (ValueError, PermissionError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "schedule" and args.schedule_command == "list":
+        print(json.dumps(list_schedules(args.engagement), indent=2))
+    elif args.command == "schedule":
+        try:
+            print(json.dumps(enqueue_due(args.engagement), indent=2))
+        except PermissionError as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "provenance":
+        print(json.dumps(executable_manifest(), indent=2))
+    elif args.command == "dashboard":
+        print(build_dashboard(args.engagement))
     return 0

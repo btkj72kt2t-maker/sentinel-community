@@ -40,6 +40,20 @@ python3 sentinel.py hunt acme example.com --mode full-safe --dry-run
 
 # Execute reviewed active adapters and generate JSON/HTML reports
 python3 sentinel.py hunt acme example.com --mode full-safe --approve-active
+
+# Correlate independent observations and score confidence
+python3 sentinel.py validate acme
+
+# Analyze an in-scope OpenAPI JSON contract without sending traffic
+python3 sentinel.py api analyze-openapi acme openapi.json
+
+# Add a bounded recurring assessment (minimum interval: five minutes)
+python3 sentinel.py schedule add acme example.com web-safe --interval 86400 --approve-active
+python3 sentinel.py schedule list acme
+
+# Build an operator dashboard and capture executable hashes
+python3 sentinel.py dashboard acme
+python3 sentinel.py provenance
 python3 sentinel.py daemon run acme --poll-seconds 15 --max-runtime 86400
 python3 sentinel.py daemon status acme
 python3 sentinel.py daemon stop acme
@@ -83,6 +97,11 @@ another location.
 - 16-family vulnerability coverage matrix derived from community methodology and modern application/infrastructure surfaces
 - One-command `hunt` orchestration for passive, web-safe, network-safe, or combined scope-bound assessments
 - Report remediation guidance mapped to finding families and CWE references
+- Cross-tool correlation with explicit unverified, reproduced, and confirmed states
+- Offline, scope-checked OpenAPI contract analysis for authentication, object authorization, and schema risks
+- Persistent recurring schedules integrated with the bounded daemon and emergency stop controls
+- Executable provenance manifests for deployment-time tool pinning
+- Local HTML operator dashboard covering findings, validation state, risk, workflows, and jobs
 - Content-addressed corpus storage and duplicate elimination
 - Coverage telemetry history and progress deltas
 - Reproduction evidence and conservative zero-day-candidate scoring

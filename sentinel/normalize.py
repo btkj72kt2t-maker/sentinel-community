@@ -87,10 +87,14 @@ def persist_normalized(conn, engagement_id: int, tool: str, target: str, normali
         entity_count += 1
     for finding in normalized["findings"]:
         fingerprint = hashlib.sha256(f"{tool}\0{target}\0{finding['title']}".encode()).hexdigest()
-        conn.execute(
-            "INSERT INTO findings(engagement_id,target,source,severity,title,details,created_at,fingerprint) VALUES(?,?,?,?,?,?,?,?) "
-            "ON CONFLICT(engagement_id,fingerprint) DO UPDATE SET occurrences=findings.occurrences+1,details=excluded.details,severity=excluded.severity",
-            (engagement_id, target, tool, finding["severity"], finding["title"], json.dumps(finding.get("details", {}), sort_keys=True), timestamp, fingerprint),
-        )
+        details = json.dumps(finding.get("details", {}), sort_keys=True)
+        existing = conn.execute("SELECT id FROM findings WHERE engagement_id=? AND fingerprint=?", (engagement_id, fingerprint)).fetchone()
+        if existing:
+            conn.execute("UPDATE findings SET occurrences=occurrences+1,details=?,severity=? WHERE id=?", (details, finding["severity"], existing["id"]))
+        else:
+            conn.execute(
+                "INSERT INTO findings(engagement_id,target,source,severity,title,details,created_at,fingerprint) VALUES(?,?,?,?,?,?,?,?)",
+                (engagement_id, target, tool, finding["severity"], finding["title"], details, timestamp, fingerprint),
+            )
         finding_count += 1
     return {"entities": entity_count, "findings": finding_count}

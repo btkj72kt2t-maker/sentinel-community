@@ -8,6 +8,7 @@ from .config import data_dir
 from .db import audit, connect, engagement, now
 from .health import check_health
 from .jobs import run_next
+from .scheduling import enqueue_due
 
 
 def daemon_status(engagement_name: str) -> dict:
@@ -53,6 +54,7 @@ def run_daemon(engagement_name: str, poll_seconds: int = 15, max_jobs: int = 100
         if stop_file.exists():
             reason = "stop_requested"
             break
+        enqueue_due(engagement_name)
         result = run_next(engagement_name)
         if result:
             processed += 1
@@ -69,4 +71,3 @@ def run_daemon(engagement_name: str, poll_seconds: int = 15, max_jobs: int = 100
         audit(conn, "daemon.stopped", summary, eng["id"])
     heartbeat.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     return summary
-
