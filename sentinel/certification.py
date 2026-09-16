@@ -6,6 +6,7 @@ import os
 import shutil
 import stat
 import subprocess
+import urllib.parse
 from pathlib import Path
 
 from .catalog import CATEGORIES, capability_catalog
@@ -23,6 +24,9 @@ VERSION_PROBES = {
     "testssl.sh": (["--version"], {0}),
     "nmap": (["--version"], {0}),
     "nuclei": (["-version"], {0}),
+    "naabu": (["-version"], {0}),
+    "katana": (["-version"], {0}),
+    "feroxbuster": (["--version"], {0}),
 }
 
 
@@ -70,8 +74,9 @@ def _adapter_check(name: str) -> dict:
         target = "sentinel.invalid"
         try:
             argv = builder(target)
-            valid = isinstance(argv, list) and all(isinstance(value, str) and value for value in argv) and argv[0] == name and target in argv
-            profiles.append({"name": profile, "status": "passed" if valid else "failed", "argument_count": len(argv), "target_is_separate_argument": target in argv})
+            target_argument = target in argv or any(urllib.parse.urlparse(value).hostname == target for value in argv if "://" in value)
+            valid = isinstance(argv, list) and all(isinstance(value, str) and value for value in argv) and argv[0] == name and target_argument
+            profiles.append({"name": profile, "status": "passed" if valid else "failed", "argument_count": len(argv), "target_is_separate_argument": target_argument})
         except Exception as exc:
             profiles.append({"name": profile, "status": "failed", "reason": str(exc)[:500]})
     status = "passed" if profiles and all(p["status"] == "passed" for p in profiles) else "failed"

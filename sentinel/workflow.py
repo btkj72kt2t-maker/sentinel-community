@@ -38,7 +38,10 @@ PROFILES: dict[str, tuple[WorkflowStep, ...]] = {
         WorkflowStep("dig", "default"),
         WorkflowStep("whois", "default"),
         WorkflowStep("subfinder", "passive"),
+        WorkflowStep("naabu", "safe"),
         WorkflowStep("httpx", "safe"),
+        WorkflowStep("katana", "safe"),
+        WorkflowStep("feroxbuster", "safe"),
         WorkflowStep("whatweb", "safe"),
         WorkflowStep("testssl.sh", "safe"),
         WorkflowStep("nmap", "safe"),
@@ -92,7 +95,7 @@ def run_workflow(workflow_id: int, *, approve_active: bool = False, dry_run: boo
         with connect() as conn:
             eng = conn.execute("SELECT * FROM engagements WHERE id=?", (flow["engagement_id"],)).fetchone()
             spec = REGISTRY[step["tool"]]
-            decision = execution_decision(eng, active=spec.active and not dry_run, approved=approve_active)
+            decision = execution_decision(eng, active=spec.active and not dry_run, lab_only=spec.lab_only and not dry_run, approved=approve_active)
             if not decision.allowed:
                 conn.execute("UPDATE workflow_steps SET status='blocked',message=? WHERE id=?", (decision.reason, step["id"]))
                 conn.execute("UPDATE workflows SET status='blocked',updated_at=? WHERE id=?", (now(), workflow_id))

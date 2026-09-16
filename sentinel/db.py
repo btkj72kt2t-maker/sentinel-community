@@ -152,6 +152,13 @@ CREATE TABLE IF NOT EXISTS component_vulnerabilities (
  source TEXT NOT NULL, updated_at TEXT NOT NULL,
  PRIMARY KEY(component_id,cve,source)
 );
+CREATE TABLE IF NOT EXISTS validation_proofs (
+ id INTEGER PRIMARY KEY, engagement_id INTEGER NOT NULL REFERENCES engagements(id) ON DELETE CASCADE,
+ finding_id INTEGER NOT NULL REFERENCES findings(id) ON DELETE CASCADE,
+ outcome TEXT NOT NULL, evidence_path TEXT NOT NULL, evidence_sha256 TEXT NOT NULL,
+ rollback_verified INTEGER NOT NULL DEFAULT 0, notes TEXT NOT NULL DEFAULT '',
+ created_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS audit (
  id INTEGER PRIMARY KEY, engagement_id INTEGER REFERENCES engagements(id) ON DELETE SET NULL,
  action TEXT NOT NULL, data TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL

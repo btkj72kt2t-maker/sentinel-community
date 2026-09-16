@@ -14,7 +14,7 @@ class TaxonomyTests(unittest.TestCase):
         catalog = capability_catalog()
         self.assertGreaterEqual(catalog["summary"]["catalogued"], 400)
         self.assertGreaterEqual(catalog["summary"]["reference_only"], 250)
-        self.assertEqual(catalog["summary"]["adapter_reviewed"], 8)
+        self.assertEqual(catalog["summary"]["adapter_reviewed"], 11)
         self.assertIn("containers-kubernetes", catalog["categories"])
 
     def test_recommendation_mapping(self):

@@ -34,6 +34,7 @@ def build_report(name: str) -> tuple[Path, Path]:
             "finding_vulnerabilities": [dict(r) for r in conn.execute("SELECT fv.* FROM finding_vulnerabilities fv JOIN findings f ON f.id=fv.finding_id WHERE f.engagement_id=? ORDER BY fv.finding_id,fv.cve", (eid,))],
             "components": [dict(r) for r in conn.execute("SELECT * FROM components WHERE engagement_id=? ORDER BY name,version", (eid,))],
             "component_vulnerabilities": [dict(r) for r in conn.execute("SELECT cv.* FROM component_vulnerabilities cv JOIN components c ON c.id=cv.component_id WHERE c.engagement_id=? ORDER BY cv.cve", (eid,))],
+            "validation_proofs": [dict(r) for r in conn.execute("SELECT * FROM validation_proofs WHERE engagement_id=? ORDER BY id", (eid,))],
         }
         payload["coverage_matrix"] = coverage_matrix()
         payload["recommendations"] = recommendations(payload["findings"])
@@ -62,6 +63,7 @@ def build_report(name: str) -> tuple[Path, Path]:
 <section><h2>Proxy observations</h2><pre>{html.escape(json.dumps(payload['proxy_observations'], indent=2))}</pre></section>
 <section><h2>Research campaigns</h2><pre>{html.escape(json.dumps(payload['research_campaigns'], indent=2))}</pre></section>
 <section><h2>Research evidence</h2><p>{len(payload['research_crashes'])} crashes · {len(payload['reproductions'])} reproductions · {len(payload['coverage_samples'])} coverage samples</p><pre>{html.escape(json.dumps(payload['research_crashes'], indent=2))}</pre></section>
+<section><h2>Lab proof evidence</h2><pre>{html.escape(json.dumps(payload['validation_proofs'], indent=2))}</pre></section>
 <section><h2>Evidence</h2><pre>{html.escape(json.dumps(payload['evidence'], indent=2))}</pre></section></body></html>"""
     html_path.write_text(page, encoding="utf-8")
     return json_path, html_path

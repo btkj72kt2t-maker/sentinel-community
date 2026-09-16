@@ -24,6 +24,16 @@ class NormalizeTests(unittest.TestCase):
         values = {item["value"] for item in result["entities"]}
         self.assertIn("example.com:443/tcp", values)
 
+    def test_naabu_service(self):
+        path = self.fixture('{"host":"example.com","port":8443,"protocol":"tcp"}\n')
+        result = normalize("naabu", path, "example.com")
+        self.assertEqual(result["entities"][0]["value"], "example.com:8443/tcp")
+
+    def test_katana_endpoint(self):
+        path = self.fixture('{"request":{"endpoint":"https://example.com/api"}}\n')
+        result = normalize("katana", path, "example.com")
+        self.assertEqual(result["entities"][0]["kind"], "endpoint")
+
 
 if __name__ == "__main__":
     unittest.main()

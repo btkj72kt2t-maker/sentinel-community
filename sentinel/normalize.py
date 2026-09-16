@@ -58,6 +58,18 @@ def normalize(tool: str, output_path: str, target: str) -> dict:
             service_match = re.search(r'<service\s+([^>]*)/?>', body)
             attributes = {k: v for k, v in re.findall(r'(\w+)="([^"]*)"', service_match.group(1))} if service_match else {}
             entities.append({"kind": "service", "value": f"{target}:{port_id}/{protocol}", "attributes": attributes})
+    elif tool == "naabu":
+        for item in _json_lines(text):
+            host = str(item.get("host") or item.get("ip") or target)
+            port = item.get("port")
+            if port:
+                entities.append({"kind": "service", "value": f"{host}:{port}/{item.get('protocol', 'tcp')}", "attributes": item})
+    elif tool in {"katana", "feroxbuster"}:
+        for item in _json_lines(text):
+            request = item.get("request") if isinstance(item.get("request"), dict) else {}
+            url = item.get("url") or request.get("endpoint") or request.get("url")
+            if url:
+                entities.append({"kind": "endpoint", "value": str(url), "attributes": {"source": tool, "status": item.get("status") or item.get("status_code")}})
     return {"entities": entities, "findings": findings}
 
 

@@ -20,6 +20,18 @@ class ToolRegistryTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             command_for("made-up-tool", "default", "example.com")
 
+    @patch("sentinel.tools.shutil.which", return_value="/usr/bin/naabu")
+    def test_naabu_is_bounded(self, _which):
+        _spec, command = command_for("naabu", "safe", "example.com")
+        self.assertIn("-rate", command)
+        self.assertIn("-top-ports", command)
+
+    @patch("sentinel.tools.shutil.which", return_value="/usr/bin/katana")
+    def test_katana_is_bounded(self, _which):
+        _spec, command = command_for("katana", "safe", "example.com")
+        self.assertIn("-host-rate-limit", command)
+        self.assertIn("-depth", command)
+
 
 if __name__ == "__main__":
     unittest.main()

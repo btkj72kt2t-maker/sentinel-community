@@ -18,6 +18,7 @@ class ToolSpec:
     description: str
     active: bool
     profiles: dict[str, Callable[[str], list[str]]]
+    lab_only: bool = False
 
 
 def _nmap(target: str) -> list[str]:
@@ -52,6 +53,18 @@ def _dig(target: str) -> list[str]:
     return ["dig", "+noall", "+answer", target, "A", target, "AAAA", target, "MX", target, "TXT"]
 
 
+def _naabu(target: str) -> list[str]:
+    return ["naabu", "-host", target, "-top-ports", "100", "-rate", "25", "-json", "-silent"]
+
+
+def _katana(target: str) -> list[str]:
+    return ["katana", "-u", f"https://{target}", "-depth", "2", "-jsonl", "-host-rate-limit", "10", "-concurrency", "2", "-parallelism", "1", "-silent"]
+
+
+def _feroxbuster(target: str) -> list[str]:
+    return ["feroxbuster", "--url", f"https://{target}", "--depth", "1", "--rate-limit", "10", "--threads", "2", "--json", "--silent", "--no-state"]
+
+
 REGISTRY: dict[str, ToolSpec] = {
     "dig": ToolSpec("dig", "recon", "DNS record collection", False, {"default": _dig}),
     "whois": ToolSpec("whois", "recon", "Registration metadata", False, {"default": _whois}),
@@ -61,6 +74,9 @@ REGISTRY: dict[str, ToolSpec] = {
     "testssl.sh": ToolSpec("testssl.sh", "tls", "TLS configuration assessment", True, {"safe": _testssl}),
     "nmap": ToolSpec("nmap", "network", "Rate-limited service discovery", True, {"safe": _nmap}),
     "nuclei": ToolSpec("nuclei", "vulnerability", "Template-based security checks", True, {"safe": _nuclei}),
+    "naabu": ToolSpec("naabu", "enumeration", "Rate-limited top-port enumeration", True, {"safe": _naabu}),
+    "katana": ToolSpec("katana", "enumeration", "Bounded web endpoint crawling", True, {"safe": _katana}),
+    "feroxbuster": ToolSpec("feroxbuster", "enumeration", "Bounded web content discovery", True, {"safe": _feroxbuster}),
 }
 
 
@@ -114,4 +130,3 @@ def execute(tool: str, profile: str, target: str, run_id: int, timeout: int = 60
         "stdout_preview": completed.stdout[:4000],
         "stderr_preview": completed.stderr[:2000],
     }
-

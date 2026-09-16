@@ -46,6 +46,7 @@ from .assessment import run_assessment
 from .feed_sync import feed_history, sync_feed
 from .stix_io import export_stix, import_stix
 from .supply_chain import component_risk, import_csaf, import_cyclonedx
+from .proof_validation import list_proofs, record_proof
 
 
 def parser() -> argparse.ArgumentParser:
@@ -168,6 +169,15 @@ def parser() -> argparse.ArgumentParser:
     marker.add_argument("engagement")
     marker.add_argument("url")
     marker.add_argument("--approve-active", action="store_true")
+    proof = ls.add_parser("record-proof")
+    proof.add_argument("engagement")
+    proof.add_argument("finding_id", type=int)
+    proof.add_argument("evidence", type=Path)
+    proof.add_argument("outcome", choices=["confirmed", "inconclusive", "not-reproduced"])
+    proof.add_argument("--rollback-verified", action="store_true")
+    proof.add_argument("--notes", default="")
+    proofs = ls.add_parser("proofs")
+    proofs.add_argument("engagement")
     credentials = sub.add_parser("credentials")
     cs = credentials.add_subparsers(dest="credentials_command", required=True)
     ca = cs.add_parser("audit")
@@ -331,7 +341,7 @@ def run_tool(args) -> None:
             spec, command = command_for(args.tool, args.profile, host)
         except (ValueError, RuntimeError) as exc:
             raise SystemExit(str(exc)) from exc
-        decision = execution_decision(eng, active=spec.active, approved=args.approve_active)
+        decision = execution_decision(eng, active=spec.active, lab_only=spec.lab_only, approved=args.approve_active)
         if not decision.allowed:
             raise SystemExit(f"Denied: {decision.reason}")
         cur = conn.execute(
@@ -480,11 +490,18 @@ def main(argv=None) -> int:
             print(json.dumps(install_manifest(args.manifest), indent=2))
         except (ValueError, json.JSONDecodeError) as exc:
             raise SystemExit(str(exc)) from exc
-    elif args.command == "lab":
+    elif args.command == "lab" and args.lab_command == "validate-marker":
         try:
             print(json.dumps(validate_marker(args.engagement, args.url, args.approve_active), indent=2))
         except (ValueError, PermissionError) as exc:
             raise SystemExit(str(exc)) from exc
+    elif args.command == "lab" and args.lab_command == "record-proof":
+        try:
+            print(json.dumps(record_proof(args.engagement, args.finding_id, args.evidence, args.outcome, rollback_verified=args.rollback_verified, notes=args.notes), indent=2))
+        except (ValueError, PermissionError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "lab":
+        print(json.dumps(list_proofs(args.engagement), indent=2))
     elif args.command == "credentials":
         try:
             print(json.dumps(audit_path(args.path, max(1, min(args.max_files, 50000))), indent=2))

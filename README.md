@@ -143,9 +143,9 @@ inventory. `coverage` maps vulnerability families to available tools.
 `readiness` shows the ten architectural foundations and outstanding production
 gates.
 
-Reviewed adapters currently cover `dig`, `whois`, `subfinder`, `httpx`,
-`whatweb`, `testssl.sh`, `nmap`, and `nuclei`. A catalogue entry without an
-adapter cannot execute through Sentinel.
+Reviewed adapters currently cover `dig`, `whois`, `subfinder`, `naabu`, `httpx`,
+`katana`, `feroxbuster`, `whatweb`, `testssl.sh`, `nmap`, and `nuclei`. A
+catalogue entry without an adapter cannot execute through Sentinel.
 
 ## 4. Reconnaissance and individual adapters
 
@@ -194,7 +194,9 @@ The execution order is:
 preflight
   → DNS and registration
   → passive subdomain discovery
+  → bounded port enumeration
   → HTTP and technology discovery
+  → bounded endpoint and content enumeration
   → TLS review
   → network service discovery
   → vulnerability checks
@@ -456,6 +458,19 @@ python3 sentinel.py lab validate-marker parser-lab \
 
 The validator sends a unique harmless marker and records whether it was reflected.
 Non-loopback targets are rejected.
+
+Record sanitized proof evidence after an approved isolated-lab reproduction:
+
+```bash
+python3 sentinel.py lab record-proof parser-lab FINDING_ID ./proof.txt confirmed \
+  --rollback-verified \
+  --notes "Reproduced in disposable lab; service restored"
+python3 sentinel.py lab proofs parser-lab
+```
+
+Confirmed proof requires an explicit rollback/cleanup confirmation. The evidence
+file is hashed and linked to the finding; this command records proof but does not
+execute an exploit.
 
 ## 15. Reports and dashboard
 
