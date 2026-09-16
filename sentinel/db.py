@@ -77,6 +77,19 @@ CREATE TABLE IF NOT EXISTS proxy_observations (
  fingerprint TEXT NOT NULL, created_at TEXT NOT NULL,
  UNIQUE(engagement_id, fingerprint)
 );
+CREATE TABLE IF NOT EXISTS research_campaigns (
+ id INTEGER PRIMARY KEY, engagement_id INTEGER NOT NULL REFERENCES engagements(id) ON DELETE CASCADE,
+ name TEXT NOT NULL, engine TEXT NOT NULL, target_path TEXT NOT NULL, corpus_path TEXT NOT NULL,
+ status TEXT NOT NULL DEFAULT 'planned', max_seconds INTEGER NOT NULL,
+ created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+ UNIQUE(engagement_id, name)
+);
+CREATE TABLE IF NOT EXISTS crashes (
+ id INTEGER PRIMARY KEY, campaign_id INTEGER NOT NULL REFERENCES research_campaigns(id) ON DELETE CASCADE,
+ fingerprint TEXT NOT NULL, crash_type TEXT NOT NULL, summary TEXT NOT NULL,
+ log_path TEXT NOT NULL, occurrences INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL,
+ UNIQUE(campaign_id, fingerprint)
+);
 CREATE TABLE IF NOT EXISTS audit (
  id INTEGER PRIMARY KEY, engagement_id INTEGER REFERENCES engagements(id) ON DELETE SET NULL,
  action TEXT NOT NULL, data TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL

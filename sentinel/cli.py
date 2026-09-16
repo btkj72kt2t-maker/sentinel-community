@@ -24,6 +24,9 @@ from .proxy_analysis import analyze_har
 from .benchmark import run_benchmarks
 from .credential_audit import audit_path
 from .lab_validation import validate_marker
+from .catalog import capability_catalog
+from .daemon import daemon_status, request_stop, run_daemon
+from .research import ENGINES, campaign_plan, create_campaign, triage_crash
 
 
 def parser() -> argparse.ArgumentParser:
@@ -127,6 +130,32 @@ def parser() -> argparse.ArgumentParser:
     ca.add_argument("--max-files", type=int, default=5000)
     benchmark = sub.add_parser("benchmark")
     benchmark.add_argument("--iterations", type=int, default=100)
+    daemon = sub.add_parser("daemon")
+    ds = daemon.add_subparsers(dest="daemon_command", required=True)
+    dr = ds.add_parser("run")
+    dr.add_argument("engagement")
+    dr.add_argument("--poll-seconds", type=int, default=15)
+    dr.add_argument("--max-jobs", type=int, default=100)
+    dr.add_argument("--max-runtime", type=int, default=86400)
+    dst = ds.add_parser("status")
+    dst.add_argument("engagement")
+    dsp = ds.add_parser("stop")
+    dsp.add_argument("engagement")
+    research = sub.add_parser("research")
+    rs = research.add_subparsers(dest="research_command", required=True)
+    rc = rs.add_parser("create")
+    rc.add_argument("engagement")
+    rc.add_argument("name")
+    rc.add_argument("engine", choices=sorted(ENGINES))
+    rc.add_argument("target", type=Path)
+    rc.add_argument("corpus", type=Path)
+    rc.add_argument("--max-seconds", type=int, default=3600)
+    rp = rs.add_parser("plan")
+    rp.add_argument("campaign_id", type=int)
+    rt = rs.add_parser("triage")
+    rt.add_argument("campaign_id", type=int)
+    rt.add_argument("log", type=Path)
+    sub.add_parser("catalog")
     return p
 
 
@@ -306,4 +335,30 @@ def main(argv=None) -> int:
             raise SystemExit(str(exc)) from exc
     elif args.command == "benchmark":
         print(json.dumps(run_benchmarks(args.iterations), indent=2))
+    elif args.command == "daemon" and args.daemon_command == "run":
+        try:
+            print(json.dumps(run_daemon(args.engagement, args.poll_seconds, args.max_jobs, args.max_runtime), indent=2))
+        except PermissionError as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "daemon" and args.daemon_command == "status":
+        print(json.dumps(daemon_status(args.engagement), indent=2))
+    elif args.command == "daemon":
+        print(request_stop(args.engagement))
+    elif args.command == "research" and args.research_command == "create":
+        try:
+            print(create_campaign(args.engagement, args.name, args.engine, args.target, args.corpus, args.max_seconds))
+        except (ValueError, PermissionError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "research" and args.research_command == "plan":
+        try:
+            print(json.dumps(campaign_plan(args.campaign_id), indent=2))
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "research":
+        try:
+            print(json.dumps(triage_crash(args.campaign_id, args.log), indent=2))
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "catalog":
+        print(json.dumps(capability_catalog(), indent=2))
     return 0

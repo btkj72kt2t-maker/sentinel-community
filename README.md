@@ -32,6 +32,13 @@ python3 sentinel.py extensions install ./sentinel-extension.json
 python3 sentinel.py lab validate-marker lab-engagement http://localhost:8000/ --approve-active
 python3 sentinel.py credentials audit ./source-tree
 python3 sentinel.py benchmark --iterations 250
+python3 sentinel.py catalog
+python3 sentinel.py daemon run acme --poll-seconds 15 --max-runtime 86400
+python3 sentinel.py daemon status acme
+python3 sentinel.py daemon stop acme
+python3 sentinel.py research create lab parser-fuzz afl++ ./parser ./corpus
+python3 sentinel.py research plan 1
+python3 sentinel.py research triage 1 ./asan-crash.log
 python3 sentinel.py report acme
 ```
 
@@ -56,6 +63,12 @@ another location.
 - Loopback-only, non-destructive marker validation for isolated lab engagements
 - Redacted credential-exposure auditing that never returns secret values
 - Reproducible local benchmarks with environment and latency disclosure
+- Persistent bounded worker with heartbeat, health repair, kill switch, and stop file
+- Local fuzzing campaign registry and sanitizer crash deduplication
+- Broad bug-bounty capability catalogue with installation detection
+
+The included systemd unit is a hardened template. Replace `ENGAGEMENT_NAME`, review
+paths and policy, then install it manually on the authorized Kali host.
 - SHA-256 evidence ingestion with append-only audit events
 - SQLite entity/relationship graph
 - JSON and HTML reporting

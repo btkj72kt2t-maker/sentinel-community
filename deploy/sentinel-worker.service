@@ -1,0 +1,19 @@
+[Unit]
+Description=Sentinel Community authorized workflow worker
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/sentinel-community
+Environment=SENTINEL_DATA_DIR=/var/lib/sentinel-community
+ExecStart=/usr/bin/python3 /opt/sentinel-community/sentinel.py daemon run ENGAGEMENT_NAME --poll-seconds 15 --max-runtime 86400
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/sentinel-community
+
+[Install]
+WantedBy=multi-user.target
