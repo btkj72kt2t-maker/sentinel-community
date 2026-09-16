@@ -27,6 +27,10 @@ from .lab_validation import validate_marker
 from .catalog import capability_catalog
 from .daemon import daemon_status, request_stop, run_daemon
 from .research import ENGINES, campaign_plan, create_campaign, triage_crash
+from .corpus import corpus_stats, ingest_corpus
+from .coverage import coverage_trend, import_coverage
+from .novelty import add_known_signature, record_reproduction, score_candidate
+from .sandbox import sandbox_plan
 
 
 def parser() -> argparse.ArgumentParser:
@@ -155,6 +159,29 @@ def parser() -> argparse.ArgumentParser:
     rt = rs.add_parser("triage")
     rt.add_argument("campaign_id", type=int)
     rt.add_argument("log", type=Path)
+    ri = rs.add_parser("ingest-corpus")
+    ri.add_argument("campaign_id", type=int)
+    ri.add_argument("source", type=Path)
+    rcs = rs.add_parser("corpus-stats")
+    rcs.add_argument("campaign_id", type=int)
+    ric = rs.add_parser("import-coverage")
+    ric.add_argument("campaign_id", type=int)
+    ric.add_argument("telemetry", type=Path)
+    rct = rs.add_parser("coverage-trend")
+    rct.add_argument("campaign_id", type=int)
+    rsb = rs.add_parser("sandbox-plan")
+    rsb.add_argument("campaign_id", type=int)
+    rr = rs.add_parser("record-reproduction")
+    rr.add_argument("crash_id", type=int)
+    rr.add_argument("input", type=Path)
+    rr.add_argument("outcome", choices=["reproduced", "not_reproduced", "timeout"])
+    rr.add_argument("--sanitizer")
+    rsc = rs.add_parser("score-candidate")
+    rsc.add_argument("crash_id", type=int)
+    rks = rs.add_parser("add-known-signature")
+    rks.add_argument("fingerprint")
+    rks.add_argument("reference")
+    rks.add_argument("--source", default="manual")
     sub.add_parser("catalog")
     return p
 
@@ -354,11 +381,28 @@ def main(argv=None) -> int:
             print(json.dumps(campaign_plan(args.campaign_id), indent=2))
         except ValueError as exc:
             raise SystemExit(str(exc)) from exc
-    elif args.command == "research":
+    elif args.command == "research" and args.research_command == "triage":
         try:
             print(json.dumps(triage_crash(args.campaign_id, args.log), indent=2))
         except ValueError as exc:
             raise SystemExit(str(exc)) from exc
+    elif args.command == "research" and args.research_command == "ingest-corpus":
+        print(json.dumps(ingest_corpus(args.campaign_id, args.source), indent=2))
+    elif args.command == "research" and args.research_command == "corpus-stats":
+        print(json.dumps(corpus_stats(args.campaign_id), indent=2))
+    elif args.command == "research" and args.research_command == "import-coverage":
+        print(json.dumps(import_coverage(args.campaign_id, args.telemetry), indent=2))
+    elif args.command == "research" and args.research_command == "coverage-trend":
+        print(json.dumps(coverage_trend(args.campaign_id), indent=2))
+    elif args.command == "research" and args.research_command == "sandbox-plan":
+        print(json.dumps(sandbox_plan(args.campaign_id), indent=2))
+    elif args.command == "research" and args.research_command == "record-reproduction":
+        print(record_reproduction(args.crash_id, args.input, args.outcome, args.sanitizer))
+    elif args.command == "research" and args.research_command == "score-candidate":
+        print(json.dumps(score_candidate(args.crash_id), indent=2))
+    elif args.command == "research":
+        add_known_signature(args.fingerprint, args.reference, args.source)
+        print("Known signature recorded")
     elif args.command == "catalog":
         print(json.dumps(capability_catalog(), indent=2))
     return 0

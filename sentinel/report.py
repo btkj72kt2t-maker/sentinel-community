@@ -24,6 +24,9 @@ def build_report(name: str) -> tuple[Path, Path]:
             "jobs": [dict(r) for r in conn.execute("SELECT * FROM jobs WHERE engagement_id=? ORDER BY id", (eid,))],
             "proxy_observations": [dict(r) for r in conn.execute("SELECT * FROM proxy_observations WHERE engagement_id=? ORDER BY id", (eid,))],
             "research_campaigns": [dict(r) for r in conn.execute("SELECT * FROM research_campaigns WHERE engagement_id=? ORDER BY id", (eid,))],
+            "research_crashes": [dict(r) for r in conn.execute("SELECT c.* FROM crashes c JOIN research_campaigns r ON r.id=c.campaign_id WHERE r.engagement_id=? ORDER BY c.id", (eid,))],
+            "coverage_samples": [dict(r) for r in conn.execute("SELECT c.* FROM coverage_samples c JOIN research_campaigns r ON r.id=c.campaign_id WHERE r.engagement_id=? ORDER BY c.id", (eid,))],
+            "reproductions": [dict(r) for r in conn.execute("SELECT p.* FROM reproductions p JOIN crashes c ON c.id=p.crash_id JOIN research_campaigns r ON r.id=c.campaign_id WHERE r.engagement_id=? ORDER BY p.id", (eid,))],
             "audit": [dict(r) for r in conn.execute("SELECT * FROM audit WHERE engagement_id=? ORDER BY id", (eid,))],
         }
     reports_dir().mkdir(parents=True, exist_ok=True)
@@ -45,6 +48,7 @@ def build_report(name: str) -> tuple[Path, Path]:
 <section><h2>Background jobs</h2><pre>{html.escape(json.dumps(payload['jobs'], indent=2))}</pre></section>
 <section><h2>Proxy observations</h2><pre>{html.escape(json.dumps(payload['proxy_observations'], indent=2))}</pre></section>
 <section><h2>Research campaigns</h2><pre>{html.escape(json.dumps(payload['research_campaigns'], indent=2))}</pre></section>
+<section><h2>Research evidence</h2><p>{len(payload['research_crashes'])} crashes · {len(payload['reproductions'])} reproductions · {len(payload['coverage_samples'])} coverage samples</p><pre>{html.escape(json.dumps(payload['research_crashes'], indent=2))}</pre></section>
 <section><h2>Evidence</h2><pre>{html.escape(json.dumps(payload['evidence'], indent=2))}</pre></section></body></html>"""
     html_path.write_text(page, encoding="utf-8")
     return json_path, html_path

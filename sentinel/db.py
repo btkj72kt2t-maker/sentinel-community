@@ -90,6 +90,26 @@ CREATE TABLE IF NOT EXISTS crashes (
  log_path TEXT NOT NULL, occurrences INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL,
  UNIQUE(campaign_id, fingerprint)
 );
+CREATE TABLE IF NOT EXISTS corpus_entries (
+ id INTEGER PRIMARY KEY, campaign_id INTEGER NOT NULL REFERENCES research_campaigns(id) ON DELETE CASCADE,
+ sha256 TEXT NOT NULL, source_path TEXT NOT NULL, stored_path TEXT NOT NULL, size INTEGER NOT NULL,
+ coverage_edges INTEGER, created_at TEXT NOT NULL,
+ UNIQUE(campaign_id, sha256)
+);
+CREATE TABLE IF NOT EXISTS coverage_samples (
+ id INTEGER PRIMARY KEY, campaign_id INTEGER NOT NULL REFERENCES research_campaigns(id) ON DELETE CASCADE,
+ executions INTEGER NOT NULL, edges INTEGER NOT NULL, paths INTEGER NOT NULL,
+ crashes INTEGER NOT NULL, hangs INTEGER NOT NULL, sampled_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS reproductions (
+ id INTEGER PRIMARY KEY, crash_id INTEGER NOT NULL REFERENCES crashes(id) ON DELETE CASCADE,
+ input_sha256 TEXT NOT NULL, outcome TEXT NOT NULL, sanitizer TEXT,
+ environment TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS known_signatures (
+ id INTEGER PRIMARY KEY, fingerprint TEXT UNIQUE NOT NULL, reference TEXT NOT NULL,
+ source TEXT NOT NULL, created_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS audit (
  id INTEGER PRIMARY KEY, engagement_id INTEGER REFERENCES engagements(id) ON DELETE SET NULL,
  action TEXT NOT NULL, data TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL

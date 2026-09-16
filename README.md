@@ -39,6 +39,13 @@ python3 sentinel.py daemon stop acme
 python3 sentinel.py research create lab parser-fuzz afl++ ./parser ./corpus
 python3 sentinel.py research plan 1
 python3 sentinel.py research triage 1 ./asan-crash.log
+python3 sentinel.py research ingest-corpus 1 ./corpus
+python3 sentinel.py research corpus-stats 1
+python3 sentinel.py research import-coverage 1 ./coverage.json
+python3 sentinel.py research coverage-trend 1
+python3 sentinel.py research sandbox-plan 1
+python3 sentinel.py research record-reproduction 1 ./crash-input --sanitizer ASan reproduced
+python3 sentinel.py research score-candidate 1
 python3 sentinel.py report acme
 ```
 
@@ -66,6 +73,10 @@ another location.
 - Persistent bounded worker with heartbeat, health repair, kill switch, and stop file
 - Local fuzzing campaign registry and sanitizer crash deduplication
 - Broad bug-bounty capability catalogue with installation detection
+- Content-addressed corpus storage and duplicate elimination
+- Coverage telemetry history and progress deltas
+- Reproduction evidence and conservative zero-day-candidate scoring
+- Sandbox readiness plans that refuse execution without a supported isolation backend
 
 The included systemd unit is a hardened template. Replace `ENGAGEMENT_NAME`, review
 paths and policy, then install it manually on the authorized Kali host.
