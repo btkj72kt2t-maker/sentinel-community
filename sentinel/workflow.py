@@ -34,6 +34,16 @@ PROFILES: dict[str, tuple[WorkflowStep, ...]] = {
         WorkflowStep("dig", "default"),
         WorkflowStep("nmap", "safe"),
     ),
+    "complete-safe": (
+        WorkflowStep("dig", "default"),
+        WorkflowStep("whois", "default"),
+        WorkflowStep("subfinder", "passive"),
+        WorkflowStep("httpx", "safe"),
+        WorkflowStep("whatweb", "safe"),
+        WorkflowStep("testssl.sh", "safe"),
+        WorkflowStep("nmap", "safe"),
+        WorkflowStep("nuclei", "safe"),
+    ),
 }
 
 

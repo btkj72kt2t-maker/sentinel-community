@@ -42,6 +42,7 @@ from .readiness import readiness_report
 from .imports import import_sarif
 from .certification import certify
 from .vulnerability_intel import import_epss, import_kev, link_findings, prioritize, validation_plan
+from .assessment import run_assessment
 
 
 def parser() -> argparse.ArgumentParser:
@@ -242,6 +243,11 @@ def parser() -> argparse.ArgumentParser:
     doctor = sub.add_parser("doctor")
     doctor.add_argument("--no-version-probes", action="store_true")
     doctor.add_argument("--write", action="store_true")
+    assess = sub.add_parser("assess", help="Run the complete reviewed assessment pipeline")
+    assess.add_argument("engagement")
+    assess.add_argument("target")
+    assess.add_argument("--approve-active", action="store_true")
+    assess.add_argument("--dry-run", action="store_true")
     return p
 
 
@@ -521,4 +527,9 @@ def main(argv=None) -> int:
         result = certify(probe_versions=not args.no_version_probes, write=args.write)
         print(json.dumps(result, indent=2))
         return 1 if result["summary"]["failed"] else 0
+    elif args.command == "assess":
+        try:
+            print(json.dumps(run_assessment(args.engagement, args.target, approve_active=args.approve_active, dry_run=args.dry_run), indent=2))
+        except (ValueError, PermissionError) as exc:
+            raise SystemExit(str(exc)) from exc
     return 0

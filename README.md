@@ -171,6 +171,46 @@ is normalized into entities and findings.
 
 ## 5. One-command hunts
 
+For the complete reviewed sequence, use `assess`. This runs one persistent
+workflow in dependency order, then performs correlation, graph construction,
+risk scoring, validation planning, reporting, dashboard generation, and a final
+health check.
+
+Review the complete sequence first:
+
+```bash
+python3 sentinel.py assess acme-active example.com --dry-run
+```
+
+Run the complete sequence with one up-front active approval:
+
+```bash
+python3 sentinel.py assess acme-active example.com --approve-active
+```
+
+The execution order is:
+
+```text
+preflight
+  → DNS and registration
+  → passive subdomain discovery
+  → HTTP and technology discovery
+  → TLS review
+  → network service discovery
+  → vulnerability checks
+  → normalization and deduplication
+  → finding correlation
+  → knowledge graph and risk prediction
+  → validation plan
+  → JSON/HTML report and dashboard
+  → evidence health check
+```
+
+Unavailable adapters are recorded as skipped; they are never replaced with
+arbitrary shell commands. A blocked policy gate stops the chain. The command
+does not run reference-only catalogue tools or automatically exploit live
+targets.
+
 Inspect a plan without network execution:
 
 ```bash
@@ -429,6 +469,12 @@ python3 sentinel.py engagement create authorized-test \
   --max-rate 20
 
 # Review before execution
+python3 sentinel.py assess authorized-test example.com --dry-run
+
+# Execute the full reviewed chain
+python3 sentinel.py assess authorized-test example.com --approve-active
+
+# Or select a narrower hunt profile
 python3 sentinel.py hunt authorized-test example.com \
   --mode full-safe \
   --dry-run
