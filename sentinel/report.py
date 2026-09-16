@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .config import reports_dir
 from .db import connect, engagement
+from .taxonomy import coverage_matrix, recommendations
 
 
 def build_report(name: str) -> tuple[Path, Path]:
@@ -29,6 +30,8 @@ def build_report(name: str) -> tuple[Path, Path]:
             "reproductions": [dict(r) for r in conn.execute("SELECT p.* FROM reproductions p JOIN crashes c ON c.id=p.crash_id JOIN research_campaigns r ON r.id=c.campaign_id WHERE r.engagement_id=? ORDER BY p.id", (eid,))],
             "audit": [dict(r) for r in conn.execute("SELECT * FROM audit WHERE engagement_id=? ORDER BY id", (eid,))],
         }
+        payload["coverage_matrix"] = coverage_matrix()
+        payload["recommendations"] = recommendations(payload["findings"])
     reports_dir().mkdir(parents=True, exist_ok=True)
     json_path = reports_dir() / f"{name}.json"
     html_path = reports_dir() / f"{name}.html"
@@ -42,6 +45,8 @@ def build_report(name: str) -> tuple[Path, Path]:
 <body><h1>SENTINEL // {html.escape(name)}</h1><p class='muted'>Authorized security engagement report</p>
 <section><h2>Scope</h2><pre>{html.escape(json.dumps(payload['scope'], indent=2))}</pre></section>
 <section><h2>Findings</h2><table><tr><th>Severity</th><th>Target</th><th>Title</th></tr>{rows}</table></section>
+<section><h2>Remediation guidance</h2><pre>{html.escape(json.dumps(payload['recommendations'], indent=2))}</pre></section>
+<section><h2>Assessment coverage</h2><pre>{html.escape(json.dumps(payload['coverage_matrix']['summary'], indent=2))}</pre></section>
 <section><h2>Graph</h2><p>{len(payload['entities'])} entities · {len(payload['relationships'])} relationships</p></section>
 <section><h2>Tool runs</h2><pre>{html.escape(json.dumps(payload['tool_runs'], indent=2))}</pre></section>
 <section><h2>Workflows</h2><pre>{html.escape(json.dumps(payload['workflows'], indent=2))}</pre></section>

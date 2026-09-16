@@ -31,6 +31,8 @@ from .corpus import corpus_stats, ingest_corpus
 from .coverage import coverage_trend, import_coverage
 from .novelty import add_known_signature, record_reproduction, score_candidate
 from .sandbox import sandbox_plan
+from .taxonomy import coverage_matrix
+from .hunt import HUNT_MODES, run_hunt
 
 
 def parser() -> argparse.ArgumentParser:
@@ -183,6 +185,13 @@ def parser() -> argparse.ArgumentParser:
     rks.add_argument("reference")
     rks.add_argument("--source", default="manual")
     sub.add_parser("catalog")
+    sub.add_parser("coverage")
+    hunt = sub.add_parser("hunt", help="Run a scope-bound assessment and produce a report")
+    hunt.add_argument("engagement")
+    hunt.add_argument("target")
+    hunt.add_argument("--mode", choices=sorted(HUNT_MODES), default="full-safe")
+    hunt.add_argument("--approve-active", action="store_true")
+    hunt.add_argument("--dry-run", action="store_true")
     return p
 
 
@@ -405,4 +414,11 @@ def main(argv=None) -> int:
         print("Known signature recorded")
     elif args.command == "catalog":
         print(json.dumps(capability_catalog(), indent=2))
+    elif args.command == "coverage":
+        print(json.dumps(coverage_matrix(), indent=2))
+    elif args.command == "hunt":
+        try:
+            print(json.dumps(run_hunt(args.engagement, args.target, args.mode, approve_active=args.approve_active, dry_run=args.dry_run), indent=2))
+        except (ValueError, PermissionError) as exc:
+            raise SystemExit(str(exc)) from exc
     return 0

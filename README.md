@@ -33,6 +33,13 @@ python3 sentinel.py lab validate-marker lab-engagement http://localhost:8000/ --
 python3 sentinel.py credentials audit ./source-tree
 python3 sentinel.py benchmark --iterations 250
 python3 sentinel.py catalog
+python3 sentinel.py coverage
+
+# One-command, scope-bound assessment plan (no network execution)
+python3 sentinel.py hunt acme example.com --mode full-safe --dry-run
+
+# Execute reviewed active adapters and generate JSON/HTML reports
+python3 sentinel.py hunt acme example.com --mode full-safe --approve-active
 python3 sentinel.py daemon run acme --poll-seconds 15 --max-runtime 86400
 python3 sentinel.py daemon status acme
 python3 sentinel.py daemon stop acme
@@ -72,7 +79,10 @@ another location.
 - Reproducible local benchmarks with environment and latency disclosure
 - Persistent bounded worker with heartbeat, health repair, kill switch, and stop file
 - Local fuzzing campaign registry and sanitizer crash deduplication
-- Broad bug-bounty capability catalogue with installation detection
+- Curated 130-tool capability index with installation detection (catalogue entries are not executable by default)
+- 16-family vulnerability coverage matrix derived from community methodology and modern application/infrastructure surfaces
+- One-command `hunt` orchestration for passive, web-safe, network-safe, or combined scope-bound assessments
+- Report remediation guidance mapped to finding families and CWE references
 - Content-addressed corpus storage and duplicate elimination
 - Coverage telemetry history and progress deltas
 - Reproduction evidence and conservative zero-day-candidate scoring
