@@ -25,6 +25,10 @@ python3 sentinel.py jobs enqueue acme 1
 python3 sentinel.py jobs run-next acme
 python3 sentinel.py intel score acme
 python3 sentinel.py intel paths acme
+python3 sentinel.py health acme
+python3 sentinel.py secure list acme
+python3 sentinel.py proxy analyze-har acme traffic.har
+python3 sentinel.py extensions install ./sentinel-extension.json
 python3 sentinel.py report acme
 ```
 
@@ -43,6 +47,9 @@ another location.
 - Finding deduplication and explainable risk scoring
 - Entity correlation and bounded attack-path analysis
 - Persistent workflow job queue
+- Evidence classification, integrity verification, and safe health repair
+- Passive in-scope HAR traffic analysis with credential redaction
+- Manifest-verified extension registration without automatic code execution
 - SHA-256 evidence ingestion with append-only audit events
 - SQLite entity/relationship graph
 - JSON and HTML reporting

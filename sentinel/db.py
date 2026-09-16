@@ -65,6 +65,18 @@ CREATE TABLE IF NOT EXISTS evidence (
  original_name TEXT NOT NULL, stored_path TEXT NOT NULL, sha256 TEXT NOT NULL, size INTEGER NOT NULL,
  created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS extensions (
+ id INTEGER PRIMARY KEY, name TEXT UNIQUE NOT NULL, version TEXT NOT NULL, category TEXT NOT NULL,
+ manifest_path TEXT NOT NULL, sha256 TEXT NOT NULL, enabled INTEGER NOT NULL DEFAULT 0,
+ installed_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS proxy_observations (
+ id INTEGER PRIMARY KEY, engagement_id INTEGER NOT NULL REFERENCES engagements(id) ON DELETE CASCADE,
+ target TEXT NOT NULL, method TEXT NOT NULL, url TEXT NOT NULL, status INTEGER,
+ severity TEXT NOT NULL, title TEXT NOT NULL, details TEXT NOT NULL DEFAULT '{}',
+ fingerprint TEXT NOT NULL, created_at TEXT NOT NULL,
+ UNIQUE(engagement_id, fingerprint)
+);
 CREATE TABLE IF NOT EXISTS audit (
  id INTEGER PRIMARY KEY, engagement_id INTEGER REFERENCES engagements(id) ON DELETE SET NULL,
  action TEXT NOT NULL, data TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL
@@ -99,6 +111,14 @@ def initialize() -> Path:
             if name not in finding_columns:
                 conn.execute(f"ALTER TABLE findings ADD COLUMN {name} {declaration}")
         conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS findings_fingerprint_idx ON findings(engagement_id,fingerprint) WHERE fingerprint IS NOT NULL")
+        evidence_columns = {r[1] for r in conn.execute("PRAGMA table_info(evidence)")}
+        for name, declaration in (
+            ("classification", "TEXT NOT NULL DEFAULT 'CONFIDENTIAL'"),
+            ("category", "TEXT NOT NULL DEFAULT 'evidence'"),
+            ("verified_at", "TEXT"),
+        ):
+            if name not in evidence_columns:
+                conn.execute(f"ALTER TABLE evidence ADD COLUMN {name} {declaration}")
     return db_path()
 
 

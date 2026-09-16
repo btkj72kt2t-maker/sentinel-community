@@ -18,6 +18,9 @@ from .workflow import PROFILES, create_workflow, run_workflow
 from .normalize import normalize, persist_normalized
 from .intelligence import attack_paths, score_engagement
 from .jobs import enqueue_workflow, list_jobs, run_next
+from .extensions import install_manifest, list_extensions
+from .health import check_health, evidence_inventory
+from .proxy_analysis import analyze_har
 
 
 def parser() -> argparse.ArgumentParser:
@@ -46,6 +49,8 @@ def parser() -> argparse.ArgumentParser:
     ev = sub.add_parser("evidence")
     ev.add_argument("engagement")
     ev.add_argument("file", type=Path)
+    ev.add_argument("--classification", choices=["PUBLIC", "INTERNAL", "CONFIDENTIAL", "RESTRICTED"], default="CONFIDENTIAL")
+    ev.add_argument("--category", default="evidence")
     rep = sub.add_parser("report")
     rep.add_argument("engagement")
     tools = sub.add_parser("tools")
@@ -87,6 +92,25 @@ def parser() -> argparse.ArgumentParser:
     jl.add_argument("engagement")
     jr = js.add_parser("run-next")
     jr.add_argument("engagement")
+    health = sub.add_parser("health")
+    health.add_argument("engagement")
+    health.add_argument("--repair", action="store_true")
+    secure = sub.add_parser("secure")
+    ss = secure.add_subparsers(dest="secure_command", required=True)
+    sl = ss.add_parser("list")
+    sl.add_argument("engagement")
+    sv = ss.add_parser("verify")
+    sv.add_argument("engagement")
+    proxy = sub.add_parser("proxy")
+    ps = proxy.add_subparsers(dest="proxy_command", required=True)
+    ph = ps.add_parser("analyze-har")
+    ph.add_argument("engagement")
+    ph.add_argument("file", type=Path)
+    extensions = sub.add_parser("extensions")
+    xs = extensions.add_subparsers(dest="extensions_command", required=True)
+    xs.add_parser("list")
+    xi = xs.add_parser("install")
+    xi.add_argument("manifest", type=Path)
     return p
 
 
@@ -131,8 +155,8 @@ def add_evidence(args) -> None:
         destination.parent.mkdir(parents=True, exist_ok=True)
         if not destination.exists():
             shutil.copy2(source, destination)
-        conn.execute("INSERT INTO evidence(engagement_id,original_name,stored_path,sha256,size,created_at) VALUES(?,?,?,?,?,?)", (eng["id"], source.name, str(destination), digest, source.stat().st_size, now()))
-        audit(conn, "evidence.added", {"name": source.name, "sha256": digest}, eng["id"])
+        conn.execute("INSERT INTO evidence(engagement_id,original_name,stored_path,sha256,size,created_at,classification,category) VALUES(?,?,?,?,?,?,?,?)", (eng["id"], source.name, str(destination), digest, source.stat().st_size, now(), args.classification, args.category))
+        audit(conn, "evidence.added", {"name": source.name, "sha256": digest, "classification": args.classification, "category": args.category}, eng["id"])
     print(f"Evidence stored: {digest}")
 
 
@@ -235,5 +259,23 @@ def main(argv=None) -> int:
         try:
             print(json.dumps(run_next(args.engagement), indent=2))
         except PermissionError as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "health":
+        print(json.dumps(check_health(args.engagement, args.repair), indent=2))
+    elif args.command == "secure" and args.secure_command == "list":
+        print(json.dumps(evidence_inventory(args.engagement), indent=2))
+    elif args.command == "secure":
+        print(json.dumps(check_health(args.engagement, False), indent=2))
+    elif args.command == "proxy":
+        try:
+            print(json.dumps(analyze_har(args.engagement, args.file), indent=2))
+        except (ValueError, json.JSONDecodeError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "extensions" and args.extensions_command == "list":
+        print(json.dumps(list_extensions(), indent=2))
+    elif args.command == "extensions":
+        try:
+            print(json.dumps(install_manifest(args.manifest), indent=2))
+        except (ValueError, json.JSONDecodeError) as exc:
             raise SystemExit(str(exc)) from exc
     return 0
