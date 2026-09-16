@@ -43,6 +43,9 @@ from .imports import import_sarif
 from .certification import certify
 from .vulnerability_intel import import_epss, import_kev, link_findings, prioritize, validation_plan
 from .assessment import run_assessment
+from .feed_sync import feed_history, sync_feed
+from .stix_io import export_stix, import_stix
+from .supply_chain import component_risk, import_csaf, import_cyclonedx
 
 
 def parser() -> argparse.ArgumentParser:
@@ -114,6 +117,22 @@ def parser() -> argparse.ArgumentParser:
     priority.add_argument("engagement")
     validation = ins.add_parser("validation-plan")
     validation.add_argument("engagement")
+    sync = ins.add_parser("sync")
+    sync.add_argument("source", choices=["kev", "epss", "all"])
+    ins.add_parser("feed-history")
+    stix_import = ins.add_parser("import-stix")
+    stix_import.add_argument("engagement")
+    stix_import.add_argument("file", type=Path)
+    stix_export = ins.add_parser("export-stix")
+    stix_export.add_argument("engagement")
+    stix_export.add_argument("file", type=Path)
+    csaf = ins.add_parser("import-csaf")
+    csaf.add_argument("file", type=Path)
+    sbom = ins.add_parser("import-sbom")
+    sbom.add_argument("engagement")
+    sbom.add_argument("file", type=Path)
+    components = ins.add_parser("component-risk")
+    components.add_argument("engagement")
     jobs = sub.add_parser("jobs")
     js = jobs.add_subparsers(dest="jobs_command", required=True)
     jq = js.add_parser("enqueue")
@@ -399,8 +418,38 @@ def main(argv=None) -> int:
         print(json.dumps(link_findings(args.engagement), indent=2))
     elif args.command == "intel" and args.intel_command == "prioritize":
         print(json.dumps(prioritize(args.engagement), indent=2))
-    elif args.command == "intel":
+    elif args.command == "intel" and args.intel_command == "validation-plan":
         print(json.dumps(validation_plan(args.engagement), indent=2))
+    elif args.command == "intel" and args.intel_command == "sync":
+        try:
+            sources = ["kev", "epss"] if args.source == "all" else [args.source]
+            print(json.dumps([sync_feed(source) for source in sources], indent=2))
+        except (ValueError, PermissionError, OSError, json.JSONDecodeError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "intel" and args.intel_command == "feed-history":
+        print(json.dumps(feed_history(), indent=2))
+    elif args.command == "intel" and args.intel_command == "import-stix":
+        try:
+            print(json.dumps(import_stix(args.engagement, args.file), indent=2))
+        except (ValueError, OSError, json.JSONDecodeError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "intel" and args.intel_command == "export-stix":
+        try:
+            print(json.dumps(export_stix(args.engagement, args.file), indent=2))
+        except (ValueError, OSError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "intel" and args.intel_command == "import-csaf":
+        try:
+            print(json.dumps(import_csaf(args.file), indent=2))
+        except (ValueError, OSError, json.JSONDecodeError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "intel" and args.intel_command == "import-sbom":
+        try:
+            print(json.dumps(import_cyclonedx(args.engagement, args.file), indent=2))
+        except (ValueError, OSError, json.JSONDecodeError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "intel":
+        print(json.dumps(component_risk(args.engagement), indent=2))
     elif args.command == "jobs" and args.jobs_command == "enqueue":
         try:
             print(enqueue_workflow(args.engagement, args.workflow_id, args.approve_active))

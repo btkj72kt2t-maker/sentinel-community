@@ -286,6 +286,17 @@ replace its placeholders and review its paths before installing it.
 
 ## 8. KEV, EPSS, and the knowledge graph
 
+Synchronize both authoritative feeds through the trusted-source updater:
+
+```bash
+python3 sentinel.py intel sync all
+python3 sentinel.py intel feed-history
+```
+
+Downloads use a built-in HTTPS host allowlist, constrained redirects, compressed
+and decompressed size limits, format validation, and SHA-256 archival under
+`.sentinel/intelligence/` before import. `sync` accepts `kev`, `epss`, or `all`.
+
 Import archived, reviewed snapshots of CISA KEV JSON and FIRST EPSS CSV:
 
 ```bash
@@ -311,6 +322,30 @@ Scores expose severity, EPSS probability, KEV status, and evidence confidence.
 Lower-priority findings use passive evidence; medium-priority findings may use
 non-destructive scoped checks; KEV and high-priority findings are routed to an
 isolated laboratory. Sentinel does not automatically exploit live targets.
+
+### STIX 2.1 exchange
+
+```bash
+python3 sentinel.py intel import-stix acme-active intelligence-bundle.json
+python3 sentinel.py intel export-stix acme-active sentinel-bundle.json
+```
+
+Imported relationships are retained where both endpoints map to supported graph
+entities. Export covers domains, IP addresses, software, and vulnerabilities;
+unsupported internal objects are not silently converted.
+
+### CSAF, VEX, and CycloneDX SBOMs
+
+```bash
+python3 sentinel.py intel import-csaf vendor-advisory.json
+python3 sentinel.py intel import-sbom acme-active bom.cdx.json
+python3 sentinel.py intel component-risk acme-active
+```
+
+Component risk combines inventory relationships, VEX state, KEV, EPSS, and
+vendor remediation. `not_affected` and `false_positive` VEX states are separated
+from affected components, but product identity and reachability still require
+verification.
 
 ## 9. Correlation, risk, and paths
 

@@ -129,6 +129,29 @@ CREATE TABLE IF NOT EXISTS finding_vulnerabilities (
  confidence REAL NOT NULL DEFAULT 1.0,
  PRIMARY KEY(finding_id,cve)
 );
+CREATE TABLE IF NOT EXISTS intelligence_feeds (
+ id INTEGER PRIMARY KEY, source TEXT NOT NULL, url TEXT NOT NULL, sha256 TEXT NOT NULL,
+ stored_path TEXT NOT NULL, size INTEGER NOT NULL, fetched_at TEXT NOT NULL,
+ UNIQUE(source,sha256)
+);
+CREATE TABLE IF NOT EXISTS stix_objects (
+ id INTEGER PRIMARY KEY, engagement_id INTEGER NOT NULL REFERENCES engagements(id) ON DELETE CASCADE,
+ stix_id TEXT NOT NULL, object_type TEXT NOT NULL, object_json TEXT NOT NULL,
+ created_at TEXT NOT NULL, UNIQUE(engagement_id,stix_id)
+);
+CREATE TABLE IF NOT EXISTS components (
+ id INTEGER PRIMARY KEY, engagement_id INTEGER NOT NULL REFERENCES engagements(id) ON DELETE CASCADE,
+ bom_ref TEXT NOT NULL, name TEXT NOT NULL, version TEXT, purl TEXT, component_type TEXT,
+ attributes TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL,
+ UNIQUE(engagement_id,bom_ref)
+);
+CREATE TABLE IF NOT EXISTS component_vulnerabilities (
+ component_id INTEGER NOT NULL REFERENCES components(id) ON DELETE CASCADE,
+ cve TEXT NOT NULL REFERENCES vulnerability_intelligence(cve) ON DELETE CASCADE,
+ vex_status TEXT NOT NULL DEFAULT 'unknown', justification TEXT, response TEXT,
+ source TEXT NOT NULL, updated_at TEXT NOT NULL,
+ PRIMARY KEY(component_id,cve,source)
+);
 CREATE TABLE IF NOT EXISTS audit (
  id INTEGER PRIMARY KEY, engagement_id INTEGER REFERENCES engagements(id) ON DELETE SET NULL,
  action TEXT NOT NULL, data TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL
