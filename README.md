@@ -425,6 +425,21 @@ python3 sentinel.py tools run acme-active nmap example.com \
   --timeout 600
 ```
 
+Run focused, bounded SQL-injection or XSS detection profiles when a narrower
+assessment is appropriate:
+
+```bash
+python3 sentinel.py tools run acme-active nuclei example.com \
+  --profile sqli-detect --approve-active
+python3 sentinel.py tools run acme-active nuclei example.com \
+  --profile xss-detect --approve-active
+```
+
+These profiles use the corresponding Nuclei template tags, a lower rate limit,
+and single-target concurrency. They detect and collect evidence; they do not
+extract database contents, modify records, execute a browser payload, or turn a
+scanner match into an automatically confirmed finding.
+
 Targets are scope-checked before execution. Adapters use argument arrays rather
 than shell strings. Output is stored under `.sentinel/runs/` and supported output
 is normalized into entities and findings.
@@ -773,6 +788,32 @@ python3 sentinel.py proof auth-matrix ENGAGEMENT FINDING_ID role-matrix.json
 
 The input uses an `observations` array with `role`, `resource`, `action`,
 `expected_allowed`, and `observed_allowed` fields.
+
+Analyze captured SQL-injection differential evidence without sending additional
+traffic:
+
+```bash
+python3 sentinel.py proof sqli-evidence ENGAGEMENT FINDING_ID sql-evidence.json
+```
+
+The input contains `baseline` and `variant` objects with `status`, `elapsed_ms`,
+and `body`. Sentinel records hashes, lengths, response similarity, timing deltas,
+status changes, and introduced database-error signatures. Response bodies are
+not stored in the proof result. Even a strong signal remains a review finding,
+not proof of database access or permission to extract data.
+
+Analyze an inert XSS reflection marker:
+
+```bash
+python3 sentinel.py proof xss-evidence ENGAGEMENT FINDING_ID xss-evidence.json
+```
+
+The input contains an 8–128 character alphanumeric `marker` and a `response`
+object with `content_type` and `body`. Sentinel reports exact reflection and
+HTML script/attribute context signals, stores only response metadata and a hash,
+and rejects executable marker text. Reflection alone is not proof that script
+execution is possible; browser-context validation remains controlled and
+lab/manual.
 
 For loopback-only callback evidence in an isolated lab:
 

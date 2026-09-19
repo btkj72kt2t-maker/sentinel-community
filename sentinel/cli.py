@@ -52,6 +52,7 @@ from .proof_engine import list_proof_runs, plan_proof, start_proof
 from .differential import analyze_authorization_matrix, analyze_differential
 from .callback_lab import issue_token, list_events, serve_callbacks
 from .disclosure import build_disclosure
+from .web_validation import analyze_sql_injection_evidence, analyze_xss_evidence
 
 
 def parser() -> argparse.ArgumentParser:
@@ -312,6 +313,14 @@ def parser() -> argparse.ArgumentParser:
     pa.add_argument("engagement")
     pa.add_argument("finding_id", type=int)
     pa.add_argument("file", type=Path)
+    pi = prs.add_parser("sqli-evidence")
+    pi.add_argument("engagement")
+    pi.add_argument("finding_id", type=int)
+    pi.add_argument("file", type=Path)
+    px = prs.add_parser("xss-evidence")
+    px.add_argument("engagement")
+    px.add_argument("finding_id", type=int)
+    px.add_argument("file", type=Path)
     pl = prs.add_parser("runs")
     pl.add_argument("engagement")
     disclosure = prs.add_parser("disclosure")
@@ -670,6 +679,16 @@ def main(argv=None) -> int:
     elif args.command == "proof" and args.proof_command == "auth-matrix":
         try:
             print(json.dumps(analyze_authorization_matrix(args.engagement, args.finding_id, args.file), indent=2))
+        except (ValueError, OSError, json.JSONDecodeError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "proof" and args.proof_command == "sqli-evidence":
+        try:
+            print(json.dumps(analyze_sql_injection_evidence(args.engagement, args.finding_id, args.file), indent=2))
+        except (ValueError, OSError, json.JSONDecodeError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "proof" and args.proof_command == "xss-evidence":
+        try:
+            print(json.dumps(analyze_xss_evidence(args.engagement, args.finding_id, args.file), indent=2))
         except (ValueError, OSError, json.JSONDecodeError) as exc:
             raise SystemExit(str(exc)) from exc
     elif args.command == "proof" and args.proof_command == "runs":

@@ -32,6 +32,14 @@ def _nuclei(target: str) -> list[str]:
     return ["nuclei", "-u", target, "-severity", "info,low,medium,high,critical", "-rate-limit", "25", "-jsonl"]
 
 
+def _nuclei_sqli(target: str) -> list[str]:
+    return ["nuclei", "-u", target, "-tags", "sqli", "-severity", "info,low,medium,high,critical", "-rate-limit", "10", "-bulk-size", "1", "-concurrency", "1", "-jsonl"]
+
+
+def _nuclei_xss(target: str) -> list[str]:
+    return ["nuclei", "-u", target, "-tags", "xss", "-severity", "info,low,medium,high,critical", "-rate-limit", "10", "-bulk-size", "1", "-concurrency", "1", "-jsonl"]
+
+
 def _subfinder(target: str) -> list[str]:
     return ["subfinder", "-d", target, "-silent", "-json"]
 
@@ -84,7 +92,7 @@ REGISTRY: dict[str, ToolSpec] = {
     "whatweb": ToolSpec("whatweb", "web", "Web technology fingerprinting", True, {"safe": _whatweb}),
     "testssl.sh": ToolSpec("testssl.sh", "tls", "TLS configuration assessment", True, {"safe": _testssl}),
     "nmap": ToolSpec("nmap", "network", "Rate-limited service discovery", True, {"safe": _nmap}),
-    "nuclei": ToolSpec("nuclei", "vulnerability", "Template-based security checks", True, {"safe": _nuclei}),
+    "nuclei": ToolSpec("nuclei", "vulnerability", "Template-based security checks", True, {"safe": _nuclei, "sqli-detect": _nuclei_sqli, "xss-detect": _nuclei_xss}),
     "naabu": ToolSpec("naabu", "enumeration", "Rate-limited top-port enumeration", True, {"safe": _naabu}),
     "katana": ToolSpec("katana", "enumeration", "Bounded web endpoint crawling", True, {"safe": _katana}),
     "feroxbuster": ToolSpec("feroxbuster", "enumeration", "Bounded web content discovery", True, {"safe": _feroxbuster}),

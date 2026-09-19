@@ -45,6 +45,14 @@ class ToolRegistryTests(unittest.TestCase):
         self.assertIn("-c", command)
         self.assertIn("-delay", command)
 
+    @patch("sentinel.tools.shutil.which", return_value="/usr/bin/nuclei")
+    def test_nuclei_web_injection_profiles_are_bounded(self, _which):
+        for profile, tag in (("sqli-detect", "sqli"), ("xss-detect", "xss")):
+            _spec, command = command_for("nuclei", profile, "example.com")
+            self.assertIn(tag, command)
+            self.assertIn("-rate-limit", command)
+            self.assertEqual(command[command.index("-concurrency") + 1], "1")
+
 
 if __name__ == "__main__":
     unittest.main()
