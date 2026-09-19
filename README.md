@@ -26,29 +26,285 @@ Use Sentinel only on systems you own or have written permission to assess.
   destructive actions, autonomous lateral movement, or indiscriminate scanning.
 - KEV and EPSS improve prioritization but do not prove that an asset is vulnerable.
 
-## Requirements and installation
+## Detailed installation guide
 
-Requirements are Python 3.10 or newer, SQLite support included with Python, and
-Linux, Kali Linux, or macOS. External tools are needed only when their reviewed
-adapters are used; Sentinel never installs them silently.
+### Requirements
+
+The Sentinel core requires:
+
+- Python 3.10 or newer, including the standard-library SQLite module.
+- Git for installation and upgrades.
+- Linux, Kali Linux, or macOS.
+- Access to this private GitHub repository.
+- Written authorization for every target placed in an engagement.
+
+The core has no third-party Python package dependency. External security tools
+are optional and are required only for the corresponding reviewed adapter.
+Sentinel never downloads, upgrades, or executes an unreviewed tool silently.
+
+Check the base environment:
+
+```bash
+python3 --version
+python3 -c "import sqlite3; print(sqlite3.sqlite_version)"
+git --version
+```
+
+### 1. Clone the private repository
+
+GitHub CLI is the simplest option for a private repository:
+
+```bash
+gh auth status
+gh repo clone btkj72kt2t-maker/sentinel-community
+cd sentinel-community
+```
+
+Alternatively, use an authenticated HTTPS or SSH setup already configured for
+your GitHub account:
 
 ```bash
 git clone https://github.com/btkj72kt2t-maker/sentinel-community.git
 cd sentinel-community
+```
+
+Never place a GitHub token directly in a clone URL, shell history, README, or
+Sentinel evidence directory.
+
+### 2. Create an isolated Python environment
+
+Sentinel can run with the system Python, but an isolated environment makes the
+runtime explicit and reproducible:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python --version
+python sentinel.py --help
+```
+
+There is currently no `pip install` step because the core uses only the Python
+standard library. In the remaining examples, replace `python3` with `python` if
+the virtual environment is active.
+
+### 3. Choose and protect the data directory
+
+By default, runtime state is written to `.sentinel/` inside the checkout. For a
+long-lived installation, use a separate directory on encrypted storage:
+
+```bash
+mkdir -p "$PWD/../sentinel-data"
+chmod 700 "$PWD/../sentinel-data"
+export SENTINEL_DATA_DIR="$PWD/../sentinel-data"
 python3 sentinel.py init
+```
+
+To keep this setting across terminal sessions, add the export to the operator's
+shell profile or to a protected service environment file. Do not point multiple
+simultaneous Sentinel processes at the same SQLite database unless the workflow
+has been designed for that deployment.
+
+The data directory may contain confidential scope, raw tool output, evidence,
+reports, and audit records. Never commit or publicly share it.
+
+### 4. Install optional reviewed adapters
+
+Sentinel currently has reviewed adapters for the following binaries:
+
+| Capability | Binary |
+|---|---|
+| DNS and registration | `dig`, `whois`, `subfinder`, `dnsx` |
+| Port and service discovery | `naabu`, `nmap` |
+| HTTP discovery and crawling | `httpx`, `katana`, `feroxbuster`, `whatweb` |
+| TLS assessment | `testssl.sh`, `tlsx` |
+| Template-based checks | `nuclei` |
+
+Install tools only from their official project, a trusted operating-system
+repository, or a verified release. Package names vary between operating-system
+versions. On Kali/Debian, the usual base packages can be installed with:
+
+```bash
+sudo apt update
+sudo apt install python3 python3-venv git golang-go \
+  bind9-dnsutils whois nmap whatweb feroxbuster testssl.sh
+```
+
+ProjectDiscovery tools can be built with the supported Go version from their
+official modules:
+
+```bash
+go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
+go install github.com/projectdiscovery/dnsx/cmd/dnsx@latest
+go install github.com/projectdiscovery/naabu/v2/cmd/naabu@latest
+go install github.com/projectdiscovery/httpx/cmd/httpx@latest
+go install github.com/projectdiscovery/katana/cmd/katana@latest
+go install github.com/projectdiscovery/tlsx/cmd/tlsx@latest
+go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+```
+
+Ensure the Go binary directory is available to Sentinel:
+
+```bash
+export PATH="$(go env GOPATH)/bin:$PATH"
+```
+
+On macOS, install Python, Git, Go, and available adapters with a trusted package
+manager, then use the same official Go module commands for ProjectDiscovery
+tools. Sentinel does not require Kali-specific filesystem paths.
+
+`latest` is convenient for a workstation evaluation. For production or
+repeatable evidence, pin approved versions, record checksums, test upgrades in a
+separate environment, and retain the generated certification report.
+
+### 5. Initialize and certify the installation
+
+```bash
+python3 sentinel.py init
+python3 sentinel.py doctor --write
+python3 sentinel.py tools list
+python3 sentinel.py coverage
+```
+
+Initialization creates the SQLite database and data directories. `doctor`
+checks adapter argument construction, executable permissions, local binary
+identity, and safe version probes. Its JSON report is written to
+`$SENTINEL_DATA_DIR/certification.json` or `.sentinel/certification.json`.
+
+A missing optional binary is reported as `untested`; it is not a successful
+installation. A workflow records that adapter as skipped and continues where
+policy permits. A `failed` certification result must be investigated before
+using the affected adapter.
+
+### 6. Run the tests
+
+Verify the checkout before using it for engagement evidence:
+
+```bash
+python3 -m py_compile sentinel.py sentinel/*.py
+python3 -W error::ResourceWarning -m unittest discover -v
+```
+
+All tests should pass. These tests validate Sentinel's policy and integration
+logic; they do not certify an external target or guarantee vulnerability
+coverage.
+
+### 7. Optional container installation
+
+The included image runs the Sentinel core as an unprivileged user:
+
+```bash
+docker build -f deploy/Dockerfile -t sentinel-community:local .
+docker volume create sentinel-data
+docker run --rm -v sentinel-data:/data sentinel-community:local init
+docker run --rm -v sentinel-data:/data sentinel-community:local doctor
+```
+
+The base image intentionally does not bundle every external scanner. Add only
+approved, pinned adapter binaries in a controlled derived image, then rerun
+`doctor --write`. Network access, target scope, and container privileges remain
+the operator's responsibility.
+
+### 8. Upgrade safely
+
+Stop workers, back up the protected data directory, then update and verify:
+
+```bash
+python3 sentinel.py daemon stop ENGAGEMENT_NAME
+git status --short
+git pull --ff-only
+python3 sentinel.py init
+python3 -m unittest discover
 python3 sentinel.py doctor --write
 ```
 
-Runtime state is stored in `.sentinel/` by default. Choose another protected
-location with:
+`init` is safe to rerun and applies additive database migrations. Review release
+changes before resuming scheduled work. Never overwrite a checkout containing
+uncommitted operator changes.
+
+## First authorized assessment
+
+This walkthrough demonstrates the normal installation-to-report flow. Replace
+`example.com` only with a target explicitly listed in your authorization.
+
+1. Create a precisely scoped, active-enabled engagement:
+
+   ```bash
+   python3 sentinel.py engagement create authorized-web \
+     --domain example.com \
+     --allow-subdomains \
+     --enable-active \
+     --max-rate 20
+   ```
+
+2. Review the stored scope and the complete execution plan:
+
+   ```bash
+   python3 sentinel.py engagement list
+   python3 sentinel.py assess authorized-web example.com --dry-run
+   ```
+
+3. Check local readiness and resolve missing tools you intend to use:
+
+   ```bash
+   python3 sentinel.py doctor --write
+   python3 sentinel.py tools list
+   ```
+
+4. Run the reviewed pipeline after confirming authorization and timing:
+
+   ```bash
+   python3 sentinel.py assess authorized-web example.com --approve-active
+   ```
+
+5. Correlate, prioritize, and generate fresh output when needed:
+
+   ```bash
+   python3 sentinel.py validate authorized-web
+   python3 sentinel.py intel prioritize authorized-web
+   python3 sentinel.py intel validation-plan authorized-web
+   python3 sentinel.py report authorized-web
+   python3 sentinel.py dashboard authorized-web
+   ```
+
+6. Verify evidence integrity and inspect the generated paths printed by the
+   report commands:
+
+   ```bash
+   python3 sentinel.py secure verify authorized-web
+   python3 sentinel.py health authorized-web
+   ```
+
+The complete assessment skips unavailable adapters, retains their status, and
+does not substitute arbitrary commands. It does not automatically exploit live
+targets. Controlled proof workflows are separately gated and documented below.
+
+## Usage guide map
+
+| Goal | Primary command | Detailed section |
+|---|---|---|
+| Define authorization boundaries | `engagement create` | Engagements and scope |
+| Stop or resume activity | `engagement kill`, `engagement resume` | Emergency controls |
+| Inspect installed capabilities | `doctor`, `tools list`, `coverage` | Tools, catalogue, and coverage |
+| Run the full reviewed chain | `assess` | One-command hunts |
+| Run a narrower plan | `hunt`, `workflow` | Hunts, workflows, and jobs |
+| Schedule bounded recurring work | `schedule`, `daemon` | Scheduling and the worker |
+| Prioritize known vulnerabilities | `intel` | KEV, EPSS, and knowledge graph |
+| Import offline results | `results import-sarif` | API, traffic, and standardized results |
+| Conduct isolated fuzzing research | `research` | Isolated vulnerability research |
+| Record controlled proof | `proof`, `lab` | Proof Engine and laboratory validation |
+| Generate deliverables | `report`, `dashboard` | Reports and dashboard |
+| Verify evidence integrity | `secure verify`, `health` | Evidence and health |
+
+Use `python3 sentinel.py COMMAND --help` for the accepted arguments of any
+top-level command. Subcommands support the same pattern, for example:
 
 ```bash
-export SENTINEL_DATA_DIR=/secure/path/sentinel-data
-python3 sentinel.py init
+python3 sentinel.py engagement create --help
+python3 sentinel.py tools run --help
+python3 sentinel.py workflow create --help
+python3 sentinel.py intel sync --help
+python3 sentinel.py proof start --help
 ```
-
-Do not commit that directory. It can contain confidential evidence, reports,
-target metadata, and audit records.
 
 ## Tool certification
 
