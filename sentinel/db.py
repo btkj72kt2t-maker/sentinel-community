@@ -159,6 +159,23 @@ CREATE TABLE IF NOT EXISTS validation_proofs (
  rollback_verified INTEGER NOT NULL DEFAULT 0, notes TEXT NOT NULL DEFAULT '',
  created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS proof_runs (
+ id INTEGER PRIMARY KEY, engagement_id INTEGER NOT NULL REFERENCES engagements(id) ON DELETE CASCADE,
+ finding_id INTEGER NOT NULL REFERENCES findings(id) ON DELETE CASCADE,
+ module_id TEXT NOT NULL, mode TEXT NOT NULL, status TEXT NOT NULL,
+ request_budget INTEGER NOT NULL DEFAULT 0, result TEXT NOT NULL DEFAULT '{}',
+ created_at TEXT NOT NULL, finished_at TEXT
+);
+CREATE TABLE IF NOT EXISTS callback_tokens (
+ id INTEGER PRIMARY KEY, engagement_id INTEGER NOT NULL REFERENCES engagements(id) ON DELETE CASCADE,
+ finding_id INTEGER REFERENCES findings(id) ON DELETE CASCADE,
+ token TEXT UNIQUE NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS callback_events (
+ id INTEGER PRIMARY KEY, token_id INTEGER NOT NULL REFERENCES callback_tokens(id) ON DELETE CASCADE,
+ method TEXT NOT NULL, path TEXT NOT NULL, source TEXT NOT NULL,
+ headers TEXT NOT NULL DEFAULT '{}', observed_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS audit (
  id INTEGER PRIMARY KEY, engagement_id INTEGER REFERENCES engagements(id) ON DELETE SET NULL,
  action TEXT NOT NULL, data TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL

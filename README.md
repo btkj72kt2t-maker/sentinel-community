@@ -472,7 +472,70 @@ Confirmed proof requires an explicit rollback/cleanup confirmation. The evidence
 file is hashed and linked to the finding; this command records proof but does not
 execute an exploit.
 
-## 15. Reports and dashboard
+## 15. Proof Engine
+
+List declarative proof modules and generate an evidence plan for a finding:
+
+```bash
+python3 sentinel.py proof modules
+python3 sentinel.py proof plan ENGAGEMENT FINDING_ID
+```
+
+Move an eligible module to `ready` after its policy gates pass:
+
+```bash
+python3 sentinel.py proof start LAB_ENGAGEMENT FINDING_ID MODULE_ID \
+  --approve-active
+python3 sentinel.py proof runs LAB_ENGAGEMENT
+```
+
+`ready` does not mean exploited. It means the module contract, request budget,
+side effects, evidence requirements, cleanup procedure, engagement mode, and
+approval were checked.
+
+Analyze two sanitized HTTP observations without sending traffic:
+
+```bash
+python3 sentinel.py proof differential ENGAGEMENT FINDING_ID differential.json
+```
+
+The JSON input contains `baseline` and `variant`, each with `status`, `headers`,
+and `body`. Sensitive headers are redacted; Sentinel records hashes, lengths,
+status changes, header-name changes, and body similarity.
+
+Evaluate an authorization matrix:
+
+```bash
+python3 sentinel.py proof auth-matrix ENGAGEMENT FINDING_ID role-matrix.json
+```
+
+The input uses an `observations` array with `role`, `resource`, `action`,
+`expected_allowed`, and `observed_allowed` fields.
+
+For loopback-only callback evidence in an isolated lab:
+
+```bash
+python3 sentinel.py lab callback-token LAB_ENGAGEMENT FINDING_ID --ttl 600
+python3 sentinel.py lab callback-listen LAB_ENGAGEMENT \
+  --seconds 300 --port 8765 --approve-active
+python3 sentinel.py lab callback-events LAB_ENGAGEMENT
+```
+
+The listener binds only to `127.0.0.1`, accepts short-lived issued tokens, stores
+header presence rather than secret values, and has a ten-minute maximum runtime.
+It is not an internet callback or command-and-control service.
+
+Generate a sanitized, hashed disclosure package:
+
+```bash
+python3 sentinel.py proof disclosure ENGAGEMENT FINDING_ID
+```
+
+The package includes the finding, linked vulnerability intelligence, proof runs,
+lab evidence, callback observations, and remediation guidance. Review it manually
+before sharing outside the authorized engagement.
+
+## 16. Reports and dashboard
 
 ```bash
 python3 sentinel.py report acme-active
@@ -484,7 +547,7 @@ coverage, graph information, runs, workflows, jobs, schedules, vulnerability
 intelligence, research evidence, and evidence metadata. The dashboard is a local
 HTML snapshot, not a network service.
 
-## 16. Extensions
+## 17. Extensions
 
 ```bash
 python3 sentinel.py extensions install ./sentinel-extension.json
@@ -494,7 +557,7 @@ python3 sentinel.py extensions list
 Registration does not execute extension code. Executable entrypoints and
 unexpected files are rejected.
 
-## 17. Provenance and benchmarking
+## 18. Provenance and benchmarking
 
 ```bash
 python3 sentinel.py provenance

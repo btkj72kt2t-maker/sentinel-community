@@ -47,6 +47,11 @@ from .feed_sync import feed_history, sync_feed
 from .stix_io import export_stix, import_stix
 from .supply_chain import component_risk, import_csaf, import_cyclonedx
 from .proof_validation import list_proofs, record_proof
+from .proof_modules import list_modules
+from .proof_engine import list_proof_runs, plan_proof, start_proof
+from .differential import analyze_authorization_matrix, analyze_differential
+from .callback_lab import issue_token, list_events, serve_callbacks
+from .disclosure import build_disclosure
 
 
 def parser() -> argparse.ArgumentParser:
@@ -178,6 +183,17 @@ def parser() -> argparse.ArgumentParser:
     proof.add_argument("--notes", default="")
     proofs = ls.add_parser("proofs")
     proofs.add_argument("engagement")
+    callback = ls.add_parser("callback-token")
+    callback.add_argument("engagement")
+    callback.add_argument("finding_id", type=int)
+    callback.add_argument("--ttl", type=int, default=600)
+    listen = ls.add_parser("callback-listen")
+    listen.add_argument("engagement")
+    listen.add_argument("--seconds", type=int, default=300)
+    listen.add_argument("--port", type=int, default=8765)
+    listen.add_argument("--approve-active", action="store_true")
+    events = ls.add_parser("callback-events")
+    events.add_argument("engagement")
     credentials = sub.add_parser("credentials")
     cs = credentials.add_subparsers(dest="credentials_command", required=True)
     ca = cs.add_parser("audit")
@@ -277,6 +293,30 @@ def parser() -> argparse.ArgumentParser:
     assess.add_argument("target")
     assess.add_argument("--approve-active", action="store_true")
     assess.add_argument("--dry-run", action="store_true")
+    proof = sub.add_parser("proof", help="Plan and record controlled proof-of-impact evidence")
+    prs = proof.add_subparsers(dest="proof_command", required=True)
+    prs.add_parser("modules")
+    pp = prs.add_parser("plan")
+    pp.add_argument("engagement")
+    pp.add_argument("finding_id", type=int)
+    ps = prs.add_parser("start")
+    ps.add_argument("engagement")
+    ps.add_argument("finding_id", type=int)
+    ps.add_argument("module_id")
+    ps.add_argument("--approve-active", action="store_true")
+    pd = prs.add_parser("differential")
+    pd.add_argument("engagement")
+    pd.add_argument("finding_id", type=int)
+    pd.add_argument("file", type=Path)
+    pa = prs.add_parser("auth-matrix")
+    pa.add_argument("engagement")
+    pa.add_argument("finding_id", type=int)
+    pa.add_argument("file", type=Path)
+    pl = prs.add_parser("runs")
+    pl.add_argument("engagement")
+    disclosure = prs.add_parser("disclosure")
+    disclosure.add_argument("engagement")
+    disclosure.add_argument("finding_id", type=int)
     return p
 
 
@@ -500,8 +540,20 @@ def main(argv=None) -> int:
             print(json.dumps(record_proof(args.engagement, args.finding_id, args.evidence, args.outcome, rollback_verified=args.rollback_verified, notes=args.notes), indent=2))
         except (ValueError, PermissionError) as exc:
             raise SystemExit(str(exc)) from exc
-    elif args.command == "lab":
+    elif args.command == "lab" and args.lab_command == "proofs":
         print(json.dumps(list_proofs(args.engagement), indent=2))
+    elif args.command == "lab" and args.lab_command == "callback-token":
+        try:
+            print(json.dumps(issue_token(args.engagement, args.finding_id, args.ttl), indent=2))
+        except (ValueError, PermissionError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "lab" and args.lab_command == "callback-listen":
+        try:
+            print(json.dumps(serve_callbacks(args.engagement, seconds=args.seconds, port=args.port, approved=args.approve_active), indent=2))
+        except (ValueError, PermissionError, OSError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "lab":
+        print(json.dumps(list_events(args.engagement), indent=2))
     elif args.command == "credentials":
         try:
             print(json.dumps(audit_path(args.path, max(1, min(args.max_files, 50000))), indent=2))
@@ -597,5 +649,34 @@ def main(argv=None) -> int:
         try:
             print(json.dumps(run_assessment(args.engagement, args.target, approve_active=args.approve_active, dry_run=args.dry_run), indent=2))
         except (ValueError, PermissionError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "proof" and args.proof_command == "modules":
+        print(json.dumps(list_modules(), indent=2))
+    elif args.command == "proof" and args.proof_command == "plan":
+        try:
+            print(json.dumps(plan_proof(args.engagement, args.finding_id), indent=2))
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "proof" and args.proof_command == "start":
+        try:
+            print(json.dumps(start_proof(args.engagement, args.finding_id, args.module_id, approved=args.approve_active), indent=2))
+        except (ValueError, PermissionError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "proof" and args.proof_command == "differential":
+        try:
+            print(json.dumps(analyze_differential(args.engagement, args.finding_id, args.file), indent=2))
+        except (ValueError, OSError, json.JSONDecodeError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "proof" and args.proof_command == "auth-matrix":
+        try:
+            print(json.dumps(analyze_authorization_matrix(args.engagement, args.finding_id, args.file), indent=2))
+        except (ValueError, OSError, json.JSONDecodeError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "proof" and args.proof_command == "runs":
+        print(json.dumps(list_proof_runs(args.engagement), indent=2))
+    elif args.command == "proof":
+        try:
+            print(json.dumps(build_disclosure(args.engagement, args.finding_id), indent=2))
+        except ValueError as exc:
             raise SystemExit(str(exc)) from exc
     return 0
