@@ -7,7 +7,7 @@ from sentinel.workflow import PROFILES
 
 class AssessmentTests(unittest.TestCase):
     def test_complete_profile_orders_every_reviewed_adapter(self):
-        self.assertEqual([step.tool for step in PROFILES["complete-safe"]], ["dig", "whois", "subfinder", "naabu", "httpx", "katana", "feroxbuster", "whatweb", "testssl.sh", "nmap", "nuclei"])
+        self.assertEqual([step.tool for step in PROFILES["complete-safe"]], ["dig", "whois", "subfinder", "dnsx", "naabu", "httpx", "katana", "feroxbuster", "whatweb", "testssl.sh", "tlsx", "nmap", "nuclei"])
 
     @patch("sentinel.assessment.run_workflow")
     @patch("sentinel.assessment.create_workflow", return_value=42)

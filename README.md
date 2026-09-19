@@ -143,9 +143,13 @@ inventory. `coverage` maps vulnerability families to available tools.
 `readiness` shows the ten architectural foundations and outstanding production
 gates.
 
-Reviewed adapters currently cover `dig`, `whois`, `subfinder`, `naabu`, `httpx`,
-`katana`, `feroxbuster`, `whatweb`, `testssl.sh`, `nmap`, and `nuclei`. A
+Reviewed adapters currently cover `dig`, `whois`, `subfinder`, `dnsx`, `naabu`,
+`httpx`, `katana`, `feroxbuster`, `whatweb`, `testssl.sh`, `tlsx`, `nmap`, and `nuclei`. A
 catalogue entry without an adapter cannot execute through Sentinel.
+
+The maintained-tool research, selection gates, accuracy model, recommended
+stack, and next integration priorities are documented in
+[`docs/advanced-tool-research.md`](docs/advanced-tool-research.md).
 
 ## 4. Reconnaissance and individual adapters
 
@@ -194,10 +198,12 @@ The execution order is:
 preflight
   → DNS and registration
   → passive subdomain discovery
+  → bounded DNS validation
   → bounded port enumeration
   → HTTP and technology discovery
   → bounded endpoint and content enumeration
   → TLS review
+  → independent TLS certificate and configuration collection
   → network service discovery
   → vulnerability checks
   → normalization and deduplication

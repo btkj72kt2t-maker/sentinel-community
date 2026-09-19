@@ -19,6 +19,9 @@ class ToolSpec:
     active: bool
     profiles: dict[str, Callable[[str], list[str]]]
     lab_only: bool = False
+    homepage: str = ""
+    output_format: str = "text"
+    capabilities: tuple[str, ...] = ()
 
 
 def _nmap(target: str) -> list[str]:
@@ -65,6 +68,14 @@ def _feroxbuster(target: str) -> list[str]:
     return ["feroxbuster", "--url", f"https://{target}", "--depth", "1", "--rate-limit", "10", "--threads", "2", "--json", "--silent", "--no-state"]
 
 
+def _dnsx(target: str) -> list[str]:
+    return ["dnsx", "-u", target, "-a", "-aaaa", "-cname", "-mx", "-ns", "-txt", "-resp", "-j", "-rl", "25", "-silent", "-duc"]
+
+
+def _tlsx(target: str) -> list[str]:
+    return ["tlsx", "-u", target, "-p", "443", "-san", "-cn", "-so", "-tls-version", "-cipher", "-hash", "sha256", "-probe-status", "-expired", "-self-signed", "-mismatched", "-untrusted", "-verify-cert", "-c", "2", "-delay", "200ms", "-timeout", "5", "-retry", "1", "-j", "-silent", "-duc"]
+
+
 REGISTRY: dict[str, ToolSpec] = {
     "dig": ToolSpec("dig", "recon", "DNS record collection", False, {"default": _dig}),
     "whois": ToolSpec("whois", "recon", "Registration metadata", False, {"default": _whois}),
@@ -77,6 +88,8 @@ REGISTRY: dict[str, ToolSpec] = {
     "naabu": ToolSpec("naabu", "enumeration", "Rate-limited top-port enumeration", True, {"safe": _naabu}),
     "katana": ToolSpec("katana", "enumeration", "Bounded web endpoint crawling", True, {"safe": _katana}),
     "feroxbuster": ToolSpec("feroxbuster", "enumeration", "Bounded web content discovery", True, {"safe": _feroxbuster}),
+    "dnsx": ToolSpec("dnsx", "dns", "Bounded multi-record DNS validation", True, {"safe": _dnsx}, homepage="https://github.com/projectdiscovery/dnsx", output_format="jsonl", capabilities=("dns-validation", "asset-correlation")),
+    "tlsx": ToolSpec("tlsx", "tls", "Bounded TLS certificate and configuration collection", True, {"safe": _tlsx}, homepage="https://github.com/projectdiscovery/tlsx", output_format="jsonl", capabilities=("certificate-inventory", "tls-misconfiguration")),
 }
 
 
@@ -92,6 +105,9 @@ def inventory() -> list[dict]:
             "installed": bool(path),
             "path": path,
             "profiles": sorted(spec.profiles),
+            "homepage": spec.homepage,
+            "output_format": spec.output_format,
+            "capabilities": list(spec.capabilities),
         })
     return output
 

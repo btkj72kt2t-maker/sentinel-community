@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import shutil
 
+from .tools import REGISTRY
+
 
 # A control-oriented taxonomy.  It records what Sentinel can assess without
 # turning public payload collections into an automatic exploitation feed.
@@ -29,8 +31,23 @@ def coverage_matrix() -> dict:
     rows = []
     for family in FAMILIES:
         available = [tool for tool in family["tools"] if shutil.which(tool)]
-        rows.append({**family, "available_tools": available, "automation": "available" if available else ("manual" if "manual" in family["mode"] else "adapter-needed")})
-    return {"families": rows, "summary": {"families": len(rows), "with_installed_tools": sum(bool(r["available_tools"]) for r in rows)}, "assurance": "Coverage is evidence-based, not a guarantee that every vulnerability or zero-day will be found."}
+        reviewed = [tool for tool in family["tools"] if tool in REGISTRY]
+        executable = [tool for tool in reviewed if shutil.which(tool)]
+        blind_spot = not reviewed and "manual" not in family["mode"]
+        rows.append({**family, "available_tools": available, "reviewed_adapters": reviewed, "executable_adapters": executable, "blind_spot": blind_spot, "automation": "reviewed-ready" if executable else ("reviewed-missing" if reviewed else ("manual" if "manual" in family["mode"] else "adapter-needed"))})
+    reviewed_families = sum(bool(r["reviewed_adapters"]) for r in rows)
+    return {
+        "families": rows,
+        "summary": {
+            "families": len(rows),
+            "with_installed_tools": sum(bool(r["available_tools"]) for r in rows),
+            "with_reviewed_adapters": reviewed_families,
+            "with_executable_adapters": sum(bool(r["executable_adapters"]) for r in rows),
+            "automation_coverage_percent": round(100 * reviewed_families / len(rows), 1),
+            "blind_spots": [r["id"] for r in rows if r["blind_spot"]],
+        },
+        "assurance": "Coverage measures reviewed capability, not a guarantee that every vulnerability or zero-day will be found.",
+    }
 
 
 def recommendations(findings: list[dict]) -> list[dict]:

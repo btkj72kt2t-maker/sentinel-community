@@ -34,6 +34,20 @@ class NormalizeTests(unittest.TestCase):
         result = normalize("katana", path, "example.com")
         self.assertEqual(result["entities"][0]["kind"], "endpoint")
 
+    def test_dnsx_records(self):
+        path = self.fixture('{"host":"www.example.com","a":["192.0.2.10"],"aaaa":["2001:db8::10"]}\n')
+        result = normalize("dnsx", path, "example.com")
+        values = {item["value"] for item in result["entities"]}
+        self.assertIn("www.example.com", values)
+        self.assertIn("192.0.2.10", values)
+        self.assertIn("2001:db8::10", values)
+
+    def test_tlsx_misconfiguration_finding(self):
+        path = self.fixture('{"host":"example.com","port":443,"expired":true}\n')
+        result = normalize("tlsx", path, "example.com")
+        self.assertEqual(result["entities"][0]["kind"], "tls_service")
+        self.assertEqual(result["findings"][0]["title"], "Expired TLS certificate")
+
 
 if __name__ == "__main__":
     unittest.main()

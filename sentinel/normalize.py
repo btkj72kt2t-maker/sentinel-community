@@ -34,6 +34,21 @@ def normalize(tool: str, output_path: str, target: str) -> dict:
             host = item.get("host") or item.get("name")
             if host:
                 entities.append({"kind": "domain", "value": str(host).lower().rstrip("."), "attributes": item})
+    elif tool == "dnsx":
+        for item in _json_lines(text):
+            host = item.get("host") or item.get("input")
+            if host:
+                entities.append({"kind": "domain", "value": str(host).lower().rstrip("."), "attributes": item})
+            for key in ("a", "aaaa"):
+                values = item.get(key) or []
+                if isinstance(values, str):
+                    values = [values]
+                for value in values:
+                    try:
+                        ipaddress.ip_address(str(value))
+                    except ValueError:
+                        continue
+                    entities.append({"kind": "ip", "value": str(value), "attributes": {"source": "dnsx", "record": key.upper(), "host": host}})
     elif tool == "httpx":
         for item in _json_lines(text):
             host = item.get("host") or item.get("input") or item.get("url")
@@ -70,6 +85,21 @@ def normalize(tool: str, output_path: str, target: str) -> dict:
             url = item.get("url") or request.get("endpoint") or request.get("url")
             if url:
                 entities.append({"kind": "endpoint", "value": str(url), "attributes": {"source": tool, "status": item.get("status") or item.get("status_code")}})
+    elif tool == "tlsx":
+        for item in _json_lines(text):
+            host = item.get("host") or item.get("input") or target
+            port = item.get("port") or 443
+            entities.append({"kind": "tls_service", "value": f"{host}:{port}", "attributes": item})
+            conditions = (
+                ("expired", "Expired TLS certificate", "high"),
+                ("self_signed", "Self-signed TLS certificate", "medium"),
+                ("mismatched", "TLS certificate name mismatch", "medium"),
+                ("revoked", "Revoked TLS certificate", "critical"),
+                ("untrusted", "Untrusted TLS certificate", "medium"),
+            )
+            for key, title, severity in conditions:
+                if item.get(key) is True:
+                    findings.append({"severity": severity, "title": title, "details": item})
     return {"entities": entities, "findings": findings}
 
 

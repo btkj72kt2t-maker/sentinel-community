@@ -27,6 +27,8 @@ VERSION_PROBES = {
     "naabu": (["-version"], {0}),
     "katana": (["-version"], {0}),
     "feroxbuster": (["--version"], {0}),
+    "dnsx": (["-version"], {0}),
+    "tlsx": (["-version"], {0}),
 }
 
 

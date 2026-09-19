@@ -32,6 +32,19 @@ class ToolRegistryTests(unittest.TestCase):
         self.assertIn("-host-rate-limit", command)
         self.assertIn("-depth", command)
 
+    @patch("sentinel.tools.shutil.which", return_value="/usr/bin/dnsx")
+    def test_dnsx_is_machine_readable_and_rate_limited(self, _which):
+        _spec, command = command_for("dnsx", "safe", "example.com")
+        self.assertIn("-j", command)
+        self.assertIn("-rl", command)
+
+    @patch("sentinel.tools.shutil.which", return_value="/usr/bin/tlsx")
+    def test_tlsx_is_bounded_and_verifies_certificates(self, _which):
+        _spec, command = command_for("tlsx", "safe", "example.com")
+        self.assertIn("-verify-cert", command)
+        self.assertIn("-c", command)
+        self.assertIn("-delay", command)
+
 
 if __name__ == "__main__":
     unittest.main()
