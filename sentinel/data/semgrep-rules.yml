@@ -1,0 +1,44 @@
+rules:
+  - id: sentinel.python.sql-string-formatting
+    languages: [python]
+    severity: WARNING
+    message: SQL query construction uses string formatting; verify parameterization.
+    metadata:
+      cwe: CWE-89
+      confidence: medium
+    patterns:
+      - pattern-either:
+          - pattern: $CURSOR.execute($QUERY % $VALUES, ...)
+          - pattern: $CURSOR.execute($QUERY.format(...), ...)
+          - pattern: $CURSOR.execute(f"...", ...)
+
+  - id: sentinel.javascript.innerhtml-assignment
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: Untrusted data assigned to innerHTML can create DOM XSS; use safe text or sanitization.
+    metadata:
+      cwe: CWE-79
+      confidence: medium
+    pattern: $ELEMENT.innerHTML = $VALUE
+
+  - id: sentinel.python.subprocess-shell-true
+    languages: [python]
+    severity: WARNING
+    message: shell=True expands injection risk; use an argument array and avoid a shell.
+    metadata:
+      cwe: CWE-78
+      confidence: medium
+    patterns:
+      - pattern-either:
+          - pattern: subprocess.run(..., shell=True, ...)
+          - pattern: subprocess.Popen(..., shell=True, ...)
+          - pattern: subprocess.call(..., shell=True, ...)
+
+  - id: sentinel.python.unsafe-yaml-load
+    languages: [python]
+    severity: ERROR
+    message: Unsafe YAML deserialization may construct arbitrary objects; use safe_load.
+    metadata:
+      cwe: CWE-502
+      confidence: high
+    pattern: yaml.load(...)

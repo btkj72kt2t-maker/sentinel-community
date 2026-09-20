@@ -11,7 +11,7 @@ AREAS = (
     (1, "Reviewed adapters", ("sentinel.tools", "sentinel.normalize")),
     (2, "API and application testing", ("sentinel.api_analysis", "sentinel.proxy_analysis")),
     (3, "Cloud and infrastructure assessment", ("sentinel.catalog", "sentinel.intelligence")),
-    (4, "Application and source-code research", ("sentinel.research", "sentinel.corpus", "sentinel.coverage")),
+    (4, "Application and source-code research", ("sentinel.research", "sentinel.corpus", "sentinel.coverage", "sentinel.source_scan")),
     (5, "Mobile, firmware, wireless and device coverage", ("sentinel.taxonomy", "sentinel.catalog")),
     (6, "Validation laboratories", ("sentinel.lab_validation", "sentinel.sandbox", "sentinel.validation")),
     (7, "Operator interface", ("sentinel.dashboard",)),

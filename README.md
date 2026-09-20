@@ -119,6 +119,9 @@ Sentinel currently has reviewed adapters for the following binaries:
 | TLS assessment | `testssl.sh`, `tlsx` |
 | Template-based checks | `nuclei` |
 
+Offline source and supply-chain analysis additionally supports `semgrep`,
+`osv-scanner`, `trivy`, `gitleaks`, and `syft`.
+
 Install tools only from their official project, a trusted operating-system
 repository, or a verified release. Package names vary between operating-system
 versions. On Kali/Debian, the usual base packages can be installed with:
@@ -151,6 +154,12 @@ export PATH="$(go env GOPATH)/bin:$PATH"
 On macOS, install Python, Git, Go, and available adapters with a trusted package
 manager, then use the same official Go module commands for ProjectDiscovery
 tools. Sentinel does not require Kali-specific filesystem paths.
+
+The priority offline analyzers are available through Homebrew:
+
+```bash
+brew install semgrep osv-scanner trivy gitleaks syft
+```
 
 `latest` is convenient for a workstation evaluation. For production or
 repeatable evidence, pin approved versions, record checksums, test upgrades in a
@@ -661,6 +670,31 @@ python3 sentinel.py results import-sarif acme-active scan-results.sarif
 
 ## 11. Source and credential-exposure review
 
+Run fixed-profile local analysis against an authorized source tree:
+
+```bash
+python3 sentinel.py source scan acme-active semgrep ./source-tree
+python3 sentinel.py source scan acme-active osv-scanner ./source-tree
+python3 sentinel.py source scan acme-active trivy ./source-tree
+python3 sentinel.py source scan acme-active gitleaks ./source-tree
+python3 sentinel.py source scan acme-active syft ./source-tree
+```
+
+- Semgrep uses Sentinel's versioned local rules with metrics disabled.
+- OSV-Scanner identifies vulnerable dependencies without enabling build-script
+  or call-analysis execution.
+- Trivy uses precise detection for vulnerabilities, configuration, and secrets.
+- Gitleaks forces complete secret redaction and excludes archive traversal.
+- Syft produces CycloneDX JSON that Sentinel imports into its component graph.
+
+Raw outputs remain protected under the run directory. Normalized secret
+findings exclude secret values, matching text, and source lines. Treat the
+source tree itself as untrusted; scanners never invoke its build scripts through
+these profiles.
+
+Some analyzers download signed advisory databases on first use. Populate and
+approve those caches in a controlled environment before an air-gapped scan.
+
 ```bash
 python3 sentinel.py credentials audit ./source-tree --max-files 5000
 ```
@@ -726,6 +760,10 @@ python3 sentinel.py research add-known-signature \
 external-database review are still required.
 
 ## 14. Loopback laboratory validation
+
+For a disposable, loopback-only Juice Shop and WebGoat environment, follow
+[`docs/lab-validation.md`](docs/lab-validation.md). Record resolved container
+digests before testing and remove all lab volumes afterward.
 
 ```bash
 python3 sentinel.py lab validate-marker parser-lab \

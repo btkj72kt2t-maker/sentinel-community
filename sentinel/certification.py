@@ -28,7 +28,8 @@ VERSION_PROBES = {
     "katana": (["-version"], {0}),
     "feroxbuster": (["--version"], {0}),
     "dnsx": (["-version"], {0}),
-    "tlsx": (["-version"], {0}),
+    # TLSX 1.4 removed its version flag; help is the stable, non-network probe.
+    "tlsx": (["-h"], {0}),
 }
 
 

@@ -53,6 +53,7 @@ from .differential import analyze_authorization_matrix, analyze_differential
 from .callback_lab import issue_token, list_events, serve_callbacks
 from .disclosure import build_disclosure
 from .web_validation import analyze_sql_injection_evidence, analyze_xss_evidence
+from .source_scan import TOOLS as SOURCE_TOOLS, scan_source
 
 
 def parser() -> argparse.ArgumentParser:
@@ -281,6 +282,13 @@ def parser() -> argparse.ArgumentParser:
     dashboard = sub.add_parser("dashboard")
     dashboard.add_argument("engagement")
     sub.add_parser("readiness")
+    source = sub.add_parser("source", help="Run safe offline source and dependency analysis")
+    source_sub = source.add_subparsers(dest="source_command", required=True)
+    source_scan = source_sub.add_parser("scan")
+    source_scan.add_argument("engagement")
+    source_scan.add_argument("tool", choices=SOURCE_TOOLS)
+    source_scan.add_argument("path", type=Path)
+    source_scan.add_argument("--timeout", type=int, default=600)
     results = sub.add_parser("results")
     rss = results.add_subparsers(dest="results_command", required=True)
     sarif = rss.add_parser("import-sarif")
@@ -645,6 +653,11 @@ def main(argv=None) -> int:
         print(build_dashboard(args.engagement))
     elif args.command == "readiness":
         print(json.dumps(readiness_report(), indent=2))
+    elif args.command == "source":
+        try:
+            print(json.dumps(scan_source(args.engagement, args.tool, args.path, timeout=args.timeout), indent=2))
+        except (ValueError, PermissionError, RuntimeError, OSError, subprocess.SubprocessError) as exc:
+            raise SystemExit(str(exc)) from exc
     elif args.command == "results":
         try:
             print(json.dumps(import_sarif(args.engagement, args.file), indent=2))

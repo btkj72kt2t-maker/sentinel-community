@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import subprocess
 
 from .db import audit, connect, engagement, now
 from .policy import execution_decision
@@ -90,6 +91,7 @@ def run_workflow(workflow_id: int, *, approve_active: bool = False, dry_run: boo
 
     summary = {"workflow_id": workflow_id, "target": flow["target"], "profile": flow["profile"], "steps": []}
     final_status = "completed"
+    consecutive_failures = 0
     for step in steps:
         if step["status"] == "completed":
             summary["steps"].append({"tool": step["tool"], "status": "already_completed"})
@@ -120,16 +122,32 @@ def run_workflow(workflow_id: int, *, approve_active: bool = False, dry_run: boo
             )
             run_id = cur.lastrowid
             conn.execute("UPDATE workflow_steps SET status='running',tool_run_id=? WHERE id=?", (run_id, step["id"]))
-        result = execute(step["tool"], step["profile"], flow["target"], run_id)
-        status = "completed" if result["exit_code"] == 0 else "failed"
+        try:
+            result = execute(step["tool"], step["profile"], flow["target"], run_id)
+            status = "completed" if result["exit_code"] == 0 else "failed"
+        except (subprocess.SubprocessError, OSError) as exc:
+            result = {"exit_code": None, "stdout_path": None, "stderr_path": None, "stderr_preview": str(exc)[:1000]}
+            status = "failed"
         with connect() as conn:
-            counts = persist_normalized(conn, flow["engagement_id"], spec.name, flow["target"], normalize(spec.name, result["stdout_path"], flow["target"]), now())
+            counts = {"entities": 0, "findings": 0}
+            if result["stdout_path"]:
+                counts = persist_normalized(conn, flow["engagement_id"], spec.name, flow["target"], normalize(spec.name, result["stdout_path"], flow["target"]), now())
             conn.execute("UPDATE tool_runs SET status=?,exit_code=?,stdout_path=?,stderr_path=?,finished_at=? WHERE id=?", (status, result["exit_code"], result["stdout_path"], result["stderr_path"], now(), run_id))
             conn.execute("UPDATE workflow_steps SET status=?,message=? WHERE id=?", (status, result.get("stderr_preview", "")[:1000], step["id"]))
             conn.execute("UPDATE workflows SET current_step=?,updated_at=? WHERE id=?", (step["position"] + 1, now(), workflow_id))
         summary["steps"].append({"tool": spec.name, "status": status, "run_id": run_id, "normalized": counts})
         if status == "failed":
             final_status = "completed_with_errors"
+            consecutive_failures += 1
+            if consecutive_failures >= 3:
+                final_status = "blocked"
+                with connect() as conn:
+                    conn.execute("UPDATE workflows SET status='blocked',updated_at=? WHERE id=?", (now(), workflow_id))
+                    audit(conn, "workflow.circuit_breaker", {"workflow_id": workflow_id, "consecutive_failures": consecutive_failures}, flow["engagement_id"])
+                summary["steps"].append({"status": "blocked", "message": "circuit breaker opened after three consecutive adapter failures"})
+                break
+        else:
+            consecutive_failures = 0
     with connect() as conn:
         conn.execute("UPDATE workflows SET status=?,updated_at=? WHERE id=?", (final_status, now(), workflow_id))
         audit(conn, "workflow.finished", {"workflow_id": workflow_id, "status": final_status}, flow["engagement_id"])

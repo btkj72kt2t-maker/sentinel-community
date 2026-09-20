@@ -3,6 +3,7 @@ from __future__ import annotations
 import shutil
 
 from .tools import REGISTRY
+from .source_scan import TOOLS as SOURCE_TOOLS
 
 
 # A control-oriented taxonomy.  It records what Sentinel can assess without
@@ -31,7 +32,7 @@ def coverage_matrix() -> dict:
     rows = []
     for family in FAMILIES:
         available = [tool for tool in family["tools"] if shutil.which(tool)]
-        reviewed = [tool for tool in family["tools"] if tool in REGISTRY]
+        reviewed = [tool for tool in family["tools"] if tool in REGISTRY or tool in SOURCE_TOOLS]
         executable = [tool for tool in reviewed if shutil.which(tool)]
         blind_spot = not reviewed and "manual" not in family["mode"]
         rows.append({**family, "available_tools": available, "reviewed_adapters": reviewed, "executable_adapters": executable, "blind_spot": blind_spot, "automation": "reviewed-ready" if executable else ("reviewed-missing" if reviewed else ("manual" if "manual" in family["mode"] else "adapter-needed"))})
