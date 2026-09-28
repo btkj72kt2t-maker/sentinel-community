@@ -35,7 +35,7 @@ The Sentinel core requires:
 - Python 3.10 or newer, including the standard-library SQLite module.
 - Git for installation and upgrades.
 - Linux, Kali Linux, or macOS.
-- Access to this private GitHub repository.
+- Access to the public GitHub repository.
 - Written authorization for every target placed in an engagement.
 
 The core has no third-party Python package dependency. External security tools
@@ -50,9 +50,9 @@ python3 -c "import sqlite3; print(sqlite3.sqlite_version)"
 git --version
 ```
 
-### 1. Clone the private repository
+### 1. Clone the repository
 
-GitHub CLI is the simplest option for a private repository:
+GitHub CLI is one convenient option:
 
 ```bash
 gh auth status
@@ -654,12 +654,69 @@ Analyze an OpenAPI 3 or Swagger JSON file without sending requests:
 python3 sentinel.py api analyze-openapi acme-active openapi.json
 ```
 
+Saved AsyncAPI and GraphQL introspection documents can be reviewed without
+opening broker connections or issuing GraphQL queries:
+
+```bash
+python3 sentinel.py api analyze-asyncapi acme-active asyncapi.json
+python3 sentinel.py api analyze-graphql acme-active introspection.json
+```
+
 Any server declared by the specification must match engagement scope. Analyze a
 browser-proxy HAR file passively:
 
 ```bash
 python3 sentinel.py proxy analyze-har acme-active traffic.har
 ```
+
+Run the credential-redacting authentication/session review for scoped HAR
+traffic:
+
+```bash
+python3 sentinel.py proxy analyze-auth-har acme-active authenticated.har
+```
+
+This records URL parameter names, cookie-policy gaps, credentialed CORS
+misconfiguration, authenticated caching risks, and CSRF review signals. It does
+not retain authorization values, cookies, query values, request bodies, or
+response bodies.
+
+Review a JWT from a protected file without storing the token:
+
+```bash
+python3 sentinel.py auth analyze-jwt acme-active ./captured-token.txt
+```
+
+Sentinel reports the algorithm, claim names, token hash, lifetime/context
+signals, and an explicit `signature_verified: false`. It does not guess signing
+keys, accept a token as valid, or persist token contents. Delete the protected
+input according to the engagement retention policy.
+
+Review exported Terraform plan JSON or Kubernetes JSON locally, without cloud
+credentials or provider API access:
+
+```bash
+terraform show -json saved.plan > terraform-plan.json
+python3 sentinel.py cloud analyze-json acme-active terraform terraform-plan.json
+python3 sentinel.py cloud analyze-json acme-active kubernetes workload.json
+```
+
+The built-in rules cover public sensitive service exposure, public object-store
+ACLs, wildcard IAM grants, privileged containers, host namespace/path sharing,
+privilege escalation, root-user policy, and added Linux capabilities. Exported
+plans may contain sensitive values; protect and remove them according to the
+engagement retention policy.
+
+Inspect an authorized mobile, firmware, or binary artifact without extraction
+or execution:
+
+```bash
+python3 sentinel.py artifact inspect acme-active firmware.bin
+```
+
+The result contains streaming SHA-256 integrity, bounded entropy analysis, and
+embedded file-signature offsets. This is triage—not proof that embedded content
+is safe or vulnerable.
 
 Import SARIF 2.1 output from SAST, SCA, IaC, cloud, container, mobile, firmware,
 or other compatible tools:
@@ -678,6 +735,13 @@ python3 sentinel.py source scan acme-active osv-scanner ./source-tree
 python3 sentinel.py source scan acme-active trivy ./source-tree
 python3 sentinel.py source scan acme-active gitleaks ./source-tree
 python3 sentinel.py source scan acme-active syft ./source-tree
+```
+
+After intentionally populating the local advisory cache, Trivy can run without
+refreshing it or performing dependency lookups:
+
+```bash
+python3 sentinel.py source scan acme-active trivy ./source-tree --offline
 ```
 
 - Semgrep uses Sentinel's versioned local rules with metrics disabled.
@@ -1014,6 +1078,8 @@ Continuous integration runs these checks and verifies the stated catalogue floor
 - Read [SECURITY.md](SECURITY.md), [the threat model](docs/threat-model.md),
   [certification](docs/certification.md), and
   [vulnerability intelligence](docs/vulnerability-intelligence.md).
+- Track the remaining external acceptance work in
+  [production-readiness gates](docs/production-readiness.md).
 
 Do not place credentials, personal data, or third-party evidence in public
 issues. Report Sentinel security defects through GitHub private vulnerability

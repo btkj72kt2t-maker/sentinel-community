@@ -16,7 +16,7 @@ TOOLS = ("gitleaks", "osv-scanner", "semgrep", "syft", "trivy")
 SEVERITIES = {"UNKNOWN": "info", "LOW": "low", "MEDIUM": "medium", "HIGH": "high", "CRITICAL": "critical"}
 
 
-def _command(tool: str, source: Path) -> list[str]:
+def _command(tool: str, source: Path, *, offline: bool = False) -> list[str]:
     path = str(source)
     commands = {
         "osv-scanner": ["osv-scanner", "scan", "source", "--recursive", "--allow-no-lockfiles", "--format", "json", "--verbosity", "error", "--experimental-exclude", ".git", "--experimental-exclude", ".sentinel", path],
@@ -25,7 +25,10 @@ def _command(tool: str, source: Path) -> list[str]:
         "gitleaks": ["gitleaks", "dir", "--report-format", "json", "--report-path", "-", "--redact=100", "--no-banner", "--no-color", "--max-archive-depth", "0", "--max-target-megabytes", "50", "--timeout", "300", path],
         "syft": ["syft", "scan", f"dir:{path}", "--output", "cyclonedx-json", "--exclude", "**/.git/**", "--exclude", "**/.sentinel/**", "--parallelism", "2", "--quiet"],
     }
-    return commands[tool]
+    command = commands[tool]
+    if tool == "trivy" and offline:
+        command[2:2] = ["--skip-db-update", "--offline-scan"]
+    return command
 
 
 def _clean_details(item: dict) -> dict:
@@ -69,7 +72,7 @@ def _findings(tool: str, payload: object) -> list[dict]:
     return findings
 
 
-def scan_source(name: str, tool: str, source: Path, *, timeout: int = 600) -> dict:
+def scan_source(name: str, tool: str, source: Path, *, timeout: int = 600, offline: bool = False) -> dict:
     if tool not in TOOLS:
         raise ValueError("unsupported source scanner")
     source = source.resolve()
@@ -81,7 +84,7 @@ def scan_source(name: str, tool: str, source: Path, *, timeout: int = 600) -> di
     binary = shutil.which(tool)
     if not binary:
         raise RuntimeError(f"{tool} is not installed")
-    command = _command(tool, source)
+    command = _command(tool, source, offline=offline)
     command[0] = binary
     run_cwd = None
     if tool == "osv-scanner" and source.is_dir():
@@ -144,4 +147,4 @@ def scan_source(name: str, tool: str, source: Path, *, timeout: int = 600) -> di
     sbom = None
     if tool == "syft" and status == "completed":
         sbom = import_cyclonedx(name, stdout_path)
-    return {"run_id": run_id, "tool": tool, "source": str(source), "status": status, "exit_code": completed.returncode, "findings": len(normalized), "output": str(stdout_path), "sbom": sbom, "parse_error": parse_error, "redaction": "Secret values and matching source lines are not normalized into findings."}
+    return {"run_id": run_id, "tool": tool, "source": str(source), "status": status, "exit_code": completed.returncode, "findings": len(normalized), "output": str(stdout_path), "sbom": sbom, "parse_error": parse_error, "offline": offline, "redaction": "Secret values and matching source lines are not normalized into findings."}

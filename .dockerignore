@@ -1,0 +1,11 @@
+.git
+.github
+.sentinel
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.log
+tests
+docs
+deploy/lab

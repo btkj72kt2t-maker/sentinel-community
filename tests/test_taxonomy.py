@@ -8,7 +8,12 @@ class TaxonomyTests(unittest.TestCase):
     def test_source_and_modern_families_are_covered(self):
         names = {item["id"] for item in FAMILIES}
         self.assertTrue({"access-control", "injection", "cache-proxy", "wireless-device", "source-binary"}.issubset(names))
-        self.assertGreaterEqual(len(coverage_matrix()["families"]), 15)
+        coverage = coverage_matrix()
+        self.assertGreaterEqual(len(coverage["families"]), 15)
+        self.assertEqual(coverage["summary"]["blind_spots"], [])
+        self.assertEqual(coverage["summary"]["reviewed_coverage_percent"], 100.0)
+        self.assertLess(coverage["summary"]["automation_coverage_percent"], 100.0)
+        self.assertIn("sentinel-artifact", next(item for item in coverage["families"] if item["id"] == "wireless-device")["reviewed_adapters"])
 
     def test_catalog_is_curated_and_broad(self):
         catalog = capability_catalog()

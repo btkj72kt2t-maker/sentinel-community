@@ -21,6 +21,7 @@ from .jobs import enqueue_workflow, list_jobs, run_next
 from .extensions import install_manifest, list_extensions
 from .health import check_health, evidence_inventory
 from .proxy_analysis import analyze_har
+from .auth_analysis import analyze_auth_har
 from .benchmark import run_benchmarks
 from .credential_audit import audit_path
 from .lab_validation import validate_marker
@@ -34,7 +35,10 @@ from .sandbox import sandbox_plan
 from .taxonomy import coverage_matrix
 from .hunt import HUNT_MODES, run_hunt
 from .validation import correlate_findings
-from .api_analysis import analyze_openapi
+from .api_analysis import analyze_asyncapi, analyze_graphql_schema, analyze_openapi
+from .cloud_analysis import analyze_cloud_json
+from .artifact_analysis import inspect_artifact
+from .token_analysis import analyze_jwt
 from .scheduling import add_schedule, enqueue_due, list_schedules
 from .provenance import executable_manifest
 from .dashboard import build_dashboard
@@ -165,6 +169,9 @@ def parser() -> argparse.ArgumentParser:
     ph = ps.add_parser("analyze-har")
     ph.add_argument("engagement")
     ph.add_argument("file", type=Path)
+    pah = ps.add_parser("analyze-auth-har")
+    pah.add_argument("engagement")
+    pah.add_argument("file", type=Path)
     extensions = sub.add_parser("extensions")
     xs = extensions.add_subparsers(dest="extensions_command", required=True)
     xs.add_parser("list")
@@ -266,6 +273,29 @@ def parser() -> argparse.ArgumentParser:
     openapi = aps.add_parser("analyze-openapi")
     openapi.add_argument("engagement")
     openapi.add_argument("spec", type=Path)
+    asyncapi = aps.add_parser("analyze-asyncapi")
+    asyncapi.add_argument("engagement")
+    asyncapi.add_argument("spec", type=Path)
+    graphql = aps.add_parser("analyze-graphql")
+    graphql.add_argument("engagement")
+    graphql.add_argument("schema", type=Path)
+    cloud = sub.add_parser("cloud", help="Review exported cloud and orchestration configuration offline")
+    cls = cloud.add_subparsers(dest="cloud_command", required=True)
+    clj = cls.add_parser("analyze-json")
+    clj.add_argument("engagement")
+    clj.add_argument("kind", choices=["terraform", "kubernetes"])
+    clj.add_argument("file", type=Path)
+    artifact = sub.add_parser("artifact", help="Inspect mobile, firmware, and binary artifacts without extraction or execution")
+    ars = artifact.add_subparsers(dest="artifact_command", required=True)
+    ari = ars.add_parser("inspect")
+    ari.add_argument("engagement")
+    ari.add_argument("file", type=Path)
+    ari.add_argument("--max-bytes", type=int, default=64 * 1024 * 1024)
+    auth = sub.add_parser("auth", help="Review authentication artifacts offline without retaining credentials")
+    aus = auth.add_subparsers(dest="auth_command", required=True)
+    auj = aus.add_parser("analyze-jwt")
+    auj.add_argument("engagement")
+    auj.add_argument("file", type=Path)
     schedule = sub.add_parser("schedule")
     scs = schedule.add_subparsers(dest="schedule_command", required=True)
     sca = scs.add_parser("add")
@@ -289,6 +319,7 @@ def parser() -> argparse.ArgumentParser:
     source_scan.add_argument("tool", choices=SOURCE_TOOLS)
     source_scan.add_argument("path", type=Path)
     source_scan.add_argument("--timeout", type=int, default=600)
+    source_scan.add_argument("--offline", action="store_true", help="Use existing local caches and prohibit Trivy dependency lookups")
     results = sub.add_parser("results")
     rss = results.add_subparsers(dest="results_command", required=True)
     sarif = rss.add_parser("import-sarif")
@@ -535,6 +566,11 @@ def main(argv=None) -> int:
         print(json.dumps(evidence_inventory(args.engagement), indent=2))
     elif args.command == "secure":
         print(json.dumps(check_health(args.engagement, False), indent=2))
+    elif args.command == "proxy" and args.proxy_command == "analyze-auth-har":
+        try:
+            print(json.dumps(analyze_auth_har(args.engagement, args.file), indent=2))
+        except (ValueError, OSError, json.JSONDecodeError) as exc:
+            raise SystemExit(str(exc)) from exc
     elif args.command == "proxy":
         try:
             print(json.dumps(analyze_har(args.engagement, args.file), indent=2))
@@ -630,10 +666,35 @@ def main(argv=None) -> int:
             raise SystemExit(str(exc)) from exc
     elif args.command == "validate":
         print(json.dumps(correlate_findings(args.engagement), indent=2))
-    elif args.command == "api":
+    elif args.command == "api" and args.api_command == "analyze-openapi":
         try:
             print(json.dumps(analyze_openapi(args.engagement, args.spec), indent=2))
         except (ValueError, PermissionError, json.JSONDecodeError, OSError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "api" and args.api_command == "analyze-asyncapi":
+        try:
+            print(json.dumps(analyze_asyncapi(args.engagement, args.spec), indent=2))
+        except (ValueError, PermissionError, json.JSONDecodeError, OSError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "api":
+        try:
+            print(json.dumps(analyze_graphql_schema(args.engagement, args.schema), indent=2))
+        except (ValueError, json.JSONDecodeError, OSError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "cloud":
+        try:
+            print(json.dumps(analyze_cloud_json(args.engagement, args.kind, args.file), indent=2))
+        except (ValueError, json.JSONDecodeError, OSError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "artifact":
+        try:
+            print(json.dumps(inspect_artifact(args.engagement, args.file, args.max_bytes), indent=2))
+        except (ValueError, OSError) as exc:
+            raise SystemExit(str(exc)) from exc
+    elif args.command == "auth":
+        try:
+            print(json.dumps(analyze_jwt(args.engagement, args.file), indent=2))
+        except (ValueError, OSError, json.JSONDecodeError) as exc:
             raise SystemExit(str(exc)) from exc
     elif args.command == "schedule" and args.schedule_command == "add":
         try:
@@ -655,7 +716,7 @@ def main(argv=None) -> int:
         print(json.dumps(readiness_report(), indent=2))
     elif args.command == "source":
         try:
-            print(json.dumps(scan_source(args.engagement, args.tool, args.path, timeout=args.timeout), indent=2))
+            print(json.dumps(scan_source(args.engagement, args.tool, args.path, timeout=args.timeout, offline=args.offline), indent=2))
         except (ValueError, PermissionError, RuntimeError, OSError, subprocess.SubprocessError) as exc:
             raise SystemExit(str(exc)) from exc
     elif args.command == "results":

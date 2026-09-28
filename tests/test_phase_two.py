@@ -76,6 +76,7 @@ class PhaseTwoTests(unittest.TestCase):
         report = readiness_report()
         self.assertEqual(len(report["areas"]), 10)
         self.assertTrue(all(area["production_complete"] is False for area in report["areas"]))
+        self.assertEqual(len({area["remaining_gate"] for area in report["areas"]}), 10)
 
 
 if __name__ == "__main__":

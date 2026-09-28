@@ -193,31 +193,31 @@ def initialize() -> Path:
     with closing(sqlite3.connect(db_path())) as conn:
         conn.executescript(SCHEMA)
         columns = {r[1] for r in conn.execute("PRAGMA table_info(engagements)")}
-        for name, declaration in (
-            ("lab_mode", "INTEGER NOT NULL DEFAULT 0"),
-            ("kill_switch", "INTEGER NOT NULL DEFAULT 0"),
-            ("max_rate", "INTEGER NOT NULL DEFAULT 25"),
+        for name, statement in (
+            ("lab_mode", "ALTER TABLE engagements ADD COLUMN lab_mode INTEGER NOT NULL DEFAULT 0"),
+            ("kill_switch", "ALTER TABLE engagements ADD COLUMN kill_switch INTEGER NOT NULL DEFAULT 0"),
+            ("max_rate", "ALTER TABLE engagements ADD COLUMN max_rate INTEGER NOT NULL DEFAULT 25"),
         ):
             if name not in columns:
-                conn.execute(f"ALTER TABLE engagements ADD COLUMN {name} {declaration}")
+                conn.execute(statement)
         finding_columns = {r[1] for r in conn.execute("PRAGMA table_info(findings)")}
-        for name, declaration in (
-            ("fingerprint", "TEXT"),
-            ("status", "TEXT NOT NULL DEFAULT 'open'"),
-            ("risk_score", "REAL NOT NULL DEFAULT 0"),
-            ("occurrences", "INTEGER NOT NULL DEFAULT 1"),
+        for name, statement in (
+            ("fingerprint", "ALTER TABLE findings ADD COLUMN fingerprint TEXT"),
+            ("status", "ALTER TABLE findings ADD COLUMN status TEXT NOT NULL DEFAULT 'open'"),
+            ("risk_score", "ALTER TABLE findings ADD COLUMN risk_score REAL NOT NULL DEFAULT 0"),
+            ("occurrences", "ALTER TABLE findings ADD COLUMN occurrences INTEGER NOT NULL DEFAULT 1"),
         ):
             if name not in finding_columns:
-                conn.execute(f"ALTER TABLE findings ADD COLUMN {name} {declaration}")
+                conn.execute(statement)
         conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS findings_fingerprint_idx ON findings(engagement_id,fingerprint) WHERE fingerprint IS NOT NULL")
         evidence_columns = {r[1] for r in conn.execute("PRAGMA table_info(evidence)")}
-        for name, declaration in (
-            ("classification", "TEXT NOT NULL DEFAULT 'CONFIDENTIAL'"),
-            ("category", "TEXT NOT NULL DEFAULT 'evidence'"),
-            ("verified_at", "TEXT"),
+        for name, statement in (
+            ("classification", "ALTER TABLE evidence ADD COLUMN classification TEXT NOT NULL DEFAULT 'CONFIDENTIAL'"),
+            ("category", "ALTER TABLE evidence ADD COLUMN category TEXT NOT NULL DEFAULT 'evidence'"),
+            ("verified_at", "ALTER TABLE evidence ADD COLUMN verified_at TEXT"),
         ):
             if name not in evidence_columns:
-                conn.execute(f"ALTER TABLE evidence ADD COLUMN {name} {declaration}")
+                conn.execute(statement)
         conn.commit()
     return db_path()
 
